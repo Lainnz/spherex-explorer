@@ -18,12 +18,25 @@ class Settings(BaseSettings):
     irsa_concurrency: int = 6
     max_fov_arcsec: float = 3600
     max_images: int = 80
-    # The shared settings file, also read by the website.
+    # SPHEREx searches at IRSA took 2.5-3 minutes on 2026-11-14 (docs/DATA_NOTES.md).
+    irsa_timeout_s: float = 300
+    # SIMBAD mirrors to try in order (Strasbourg was down on 2026-11-14; Harvard worked).
+    simbad_servers: str = "simbad.cds.unistra.fr,simbad.harvard.edu"
+    # The shared settings files, also read by the website.
     datasets_path: Path = REPO_ROOT / "config" / "datasets.json"
+    targets_path: Path = REPO_ROOT / "config" / "targets.json"
 
     @property
     def origins(self) -> list[str]:
-        return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
+        return _split(self.allowed_origins)
+
+    @property
+    def simbad_server_list(self) -> list[str]:
+        return _split(self.simbad_servers)
+
+
+def _split(text: str) -> list[str]:
+    return [part.strip() for part in text.split(",") if part.strip()]
 
 
 settings = Settings()

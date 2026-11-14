@@ -81,7 +81,9 @@ s_fov, em_xel, pol_states, pol_xel, cloud_access, o_ucd, upload_row_id`
   hard, and check whether the cutout service can skip EPSF (TODO).
 - Header: `DETECTOR`, `DATE-AVG`, `MJD-AVG`, `VERSION` (pipeline 7.0.5), spatial
   WCS `RA---TAN-SIP`, spectral WCS key `W` with `WAVE-TAB` lookup.
-- Wavelength at centre pixel: **TODO** (needs astropy).
+- Wavelength at centre pixel (29, 30): **2.2879 µm**, bandwidth 0.0569 µm. Corners:
+  2.3005 µm at (0, 0) and 2.2758 µm at (57, 58). That's a 0.025 µm change across a 6′
+  cutout, which is the linear variable filter at work.
 
 ### FLAGS (22 bits, from `MSKN*`/`MSKD*`)
 | Bit | Name | Description |
@@ -143,6 +145,50 @@ s_fov, em_xel, pol_states, pol_xel, cloud_access, o_ucd, upload_row_id`
   `setViewCenter2NorthPoleAngle`, `setSliceNumber` and `cubeDepth`, so rotation and
   HiPS-cube plane switching are both present. Confirmed by reading the source only.
   A small live test page comes in Phase 7.
+
+## 10. Phase 2 findings (2026-11-14, afternoon)
+- **IRSA outages.** From about 15:30 local time, SIA and TAP searches returned
+  `502 Proxy Error`, even for `wise_allwise`. Simple TAP lookups (`TAP_SCHEMA`) came and
+  went. The backend turns this into `{"error": "irsa_unavailable"}` (HTTP 503).
+- **IRSA TAP tables** (`spherex` schema): `spherex.obscore` (same columns as SIA plus
+  `poly`, `pt`, `ipac_gid`, `ipac_pub_date`), `spherex.observation`, `spherex.plane`,
+  `spherex.artifact`, `spherex.provenance_input`, `splices`. Cone searches on
+  `spherex.obscore` couldn't be tested (502), so **TAP is not used yet**; the backend uses
+  SIA only. TODO: time a TAP cone search when IRSA is healthy.
+- **SIA VOTables:** column IDs differ from column names. Read with
+  `to_table(use_names_over_ids=True)`.
+- **SIMBAD:** `simbad.cds.unistra.fr` showed a "CDS fallback" page and 404s. The page
+  lists mirrors `simbad.cfa.harvard.edu` and `simbad.idia.ac.za`. astroquery 0.4.11 only
+  accepts `simbad.cds.unistra.fr` and `simbad.harvard.edu`, and the Harvard one works.
+  `backend/app/resolve.py` tries them in order (`SIMBAD_SERVERS` env var).
+- **WISE 0855:** the team's coordinates (08h55m10.831s −07d14m42.53s) are about 85″ from
+  SIMBAD's J2000 position. At its motion (−8124, +673 mas/yr) that is about 10.4 years,
+  so they are its position around 2010 (WISE era). `config/targets.json` keeps the team's
+  numbers as `ra`/`dec` and SIMBAD's J2000 position + proper motion as `motion`.
+- **Motion check:** propagating Barnard's Star from J2000 to 2025-08-15 moves it +266″ in
+  Dec and −20.5″ in RA, matching the plan's "about 4 arcminutes". Without a known distance
+  the result changes by only 0.4″ (ERFA warns; the warning is silenced).
+- **Random positions:** the plan's per-pick SIA coverage check isn't practical (searches
+  take minutes). DR1's all-sky cube has full-sky coverage, so it is skipped.
+
+### Observation report (`scripts/observation_report.py`, live IRSA, DR1 + QR3, all detectors)
+Search radius 0.01° around each target's mid-2026 predicted position.
+
+| Target | Images | DR1 / QR3 | Wide / Deep | Visits | Dates | Predicted motion first → last image |
+|---|---|---|---|---|---|---|
+| Barnard's Star | 364 | 240 / 124 | 364 / 0 | 5 | 2025-08-15 → 2026-09-22 | 11.5″ |
+| Epsilon Indi B | 467 | 347 / 120 | 467 / 0 | 4 | 2025-04-24 → 2026-10-02 | 6.7″ |
+| WISE 0855 | 258 | 258 / 0 | 258 / 0 | 4 | 2025-05-05 → 2026-05-14 | 8.3″ |
+| RW Aurigae | 336 | 226 / 110 | 336 / 0 | 3 | 2025-09-01 → 2026-09-16 | 0.0″ |
+| R Draconis | 2514 | 1655 / 859 | 548 / 1966 | 3 | 2025-04-24 → 2026-09-27 | 0.0″ |
+
+- DR1 starts 2025-04-24 (earlier than the Barnard's Star-only check suggested).
+- WISE 0855 has no QR3 images yet.
+- **Deep Fields break the "visit" idea.** R Draconis is observed almost continuously, so
+  the 20-day gap rule merges months into one "visit" (Visit 3 = 1793 images,
+  Feb → Sep 2026). Phase 3 needs fixed time windows (e.g. 2 weeks) for Deep Field targets.
+- Some "visits" are short top-ups a few weeks after a main one (Barnard's Star visits 2
+  and 4 have 10 and 8 images).
 
 ## Sources
 IRSA SIA (`https://irsa.ipac.caltech.edu/SIA`), IRSA cutouts (IBE), IRSA HiPS

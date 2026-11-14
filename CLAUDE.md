@@ -33,3 +33,5 @@ Check there before assuming anything about IRSA, and add to it when you learn mo
 - Never download full SPHEREx files (about 70 MB). Cutouts only, and each is about 4 MB
   because of the EPSF table.
 - IRSA SIA searches currently take 2–3 minutes. Use long timeouts and cache results.
+- Backend tests never touch the network: `tests/conftest.py` serves saved real IRSA answers
+  from `tests/fixtures/`. Keep it that way.

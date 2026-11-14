@@ -15,6 +15,7 @@ def test_health_reports_ok_and_releases():
 
 def test_config_serves_datasets_json():
     body = client.get("/api/config").json()
+    assert body["limits"]["cutout_mb_estimate"] > 0
     assert [d["id"] for d in body["detectors"]] == ["D1", "D2", "D3", "D4", "D5", "D6"]
     assert body["allsky_cube"]["depth"] == len(body["allsky_cube"]["wavelengths_um"]) == 102
 
