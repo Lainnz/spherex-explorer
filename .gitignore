@@ -1,3 +1,9 @@
+# Python (SPHEREx Xplorer backend + scripts)
+.venv/
+__pycache__/
+.pytest_cache/
+scripts/scratch/
+
 # Logs
 logs
 *.log
