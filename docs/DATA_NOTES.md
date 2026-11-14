@@ -190,6 +190,31 @@ Search radius 0.01° around each target's mid-2026 predicted position.
 - Some "visits" are short top-ups a few weeks after a main one (Barnard's Star visits 2
   and 4 have 10 and 8 images).
 
+## 11. Phase 3 findings (2026-11-14, evening)
+- **Bad-pixel flags.** The default exclusion set is the list that sets `CONTAINS_BAD_PIXEL`
+  (Explanatory Supplement Table 16), copied from IRSA's
+  `spherex_source_discovery_tool_demo` tutorial: TRANSIENT, OVERFLOW, SUR_ERROR, NONFUNC,
+  DICHROIC, MISSING_DATA, HOT, COLD, NONLINEAR, CROSSTALK, GHOST, GHOST_FPA, GHOST_EXT,
+  STREAK, PERSIST, BLOOM, SNOWBALL, HALO, SATELLITE_HALO. (SATELLITE_HALO isn't in our DR1
+  cutout's FLAGS header; unknown names are skipped.) FULLSAMPLE, PHANMISS, OUTLIER and
+  SOURCE are informational. Every pixel of the test cutout has some flag set (FULLSAMPLE),
+  so "any flag = bad" would blank everything.
+- **Saturated star cores.** Barnard's Star's core pixels are flagged OVERFLOW / SUR_ERROR /
+  TRANSIENT / BLOOM in every image, with raw values from 23 to 2000 MJy/sr (and some NaN).
+  Frames fill such holes (pixels flagged in *every* co-added image) with the brightest good
+  neighbour, for display only. Filled pixels keep NaN variance, and each frame reports
+  `filled_pixels`. Option `fill_flagged: false` turns this off.
+- **Cutout size.** No documented option drops the EPSF table, and IRSA doesn't compress
+  (`Accept-Encoding: gzip` gives the same 4.04 MB). Cutouts take about 4–5 s each.
+- **Spectral WCS.** The IMAGE header's SIP keywords make astropy log an "inconsistent SIP"
+  notice when building the `W` (wavelength) WCS. We drop `A_*/B_*/AP_*/BP_*` from a header
+  copy first, which is equivalent to IRSA's `spectral_wcs.sip = None`.
+- **FITS products** need ASCII-only header text (labels use · and →, which are converted).
+- **Contact sheets** (`scripts/contact_sheet.py` → `docs/images/phase3/`). WISE 0855's
+  D5 difference (Apr–May 2026 minus May 2025) shows a dark/bright pair about 8″ apart along
+  the predicted path. Barnard's Star's D1 difference shows its northward shift (about 11″,
+  under 2 pixels) as a bright north / dark south pair.
+
 ## Sources
 IRSA SIA (`https://irsa.ipac.caltech.edu/SIA`), IRSA cutouts (IBE), IRSA HiPS
 properties, CDS MocServer, npm registry/jsDelivr for Aladin Lite.

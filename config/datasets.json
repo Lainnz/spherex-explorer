@@ -57,8 +57,15 @@
     "default_fov_arcsec": 600,
     "max_images_default": 80,
     "epoch_gap_days": 20,
+    "deep_field_window_days": 14,
+    "cutout_size_margin": 1.15,
     "cutout_mb_estimate": 4.1,
     "irsa_timeout_s": 300
   },
-  "flags_default_exclude": "TODO: from the Explanatory Supplement bad-pixel list (Phase 0 follow-up)"
+  "_flags_note": "Flags that set CONTAINS_BAD_PIXEL (SPHEREx Explanatory Supplement Table 16), as listed in IRSA's spherex_source_discovery_tool_demo tutorial. Names missing from an image's FLAGS header are ignored.",
+  "flags_default_exclude": [
+    "TRANSIENT", "OVERFLOW", "SUR_ERROR", "NONFUNC", "DICHROIC", "MISSING_DATA", "HOT", "COLD",
+    "NONLINEAR", "CROSSTALK", "GHOST", "GHOST_FPA", "GHOST_EXT", "STREAK", "PERSIST",
+    "BLOOM", "SNOWBALL", "HALO", "SATELLITE_HALO"
+  ]
 }

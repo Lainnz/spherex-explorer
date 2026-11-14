@@ -2,6 +2,9 @@
 
 SPHEREx comes back to each part of the sky about every 6 months and takes several
 images over a few days. Images closer together in time than `gap_days` are one visit.
+
+Deep Fields (near the ecliptic poles, e.g. R Draconis) are observed almost constantly,
+so gaps never appear; there, `max_span_days` cuts the timeline into fixed windows.
 """
 import numpy as np
 from astropy.time import Time
@@ -12,8 +15,11 @@ def mjd_to_date(mjd: float) -> str:
     return Time(mjd, format="mjd").to_value("iso", subfmt="date")
 
 
-def assign_visits(rows: list[dict], gap_days: float) -> list[dict]:
+def assign_visits(rows: list[dict], gap_days: float, max_span_days: float | None = None) -> list[dict]:
     """Sort rows by time, add a 1-based `visit` number to each, and summarise the visits.
+
+    A new visit starts after a gap longer than `gap_days`, or (if given) once the current
+    visit already spans `max_span_days`.
 
     Returns one summary per visit: number, start/end MJD, image count and a label like
     "Visit 2 · 2025-11-03 → 2025-11-12".
@@ -21,7 +27,11 @@ def assign_visits(rows: list[dict], gap_days: float) -> list[dict]:
     rows.sort(key=lambda row: row["t_mid"])
     visits: list[dict] = []
     for row in rows:
-        if not visits or row["t_mid"] - visits[-1]["t_end"] > gap_days:
+        if (
+            not visits
+            or row["t_mid"] - visits[-1]["t_end"] > gap_days
+            or (max_span_days is not None and row["t_mid"] - visits[-1]["t_start"] > max_span_days)
+        ):
             visits.append({"visit": len(visits) + 1, "t_start": row["t_mid"], "t_end": row["t_mid"], "n_images": 0})
         current = visits[-1]
         current["t_end"] = row["t_mid"]

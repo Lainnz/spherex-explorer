@@ -64,7 +64,11 @@ async def find_observations(
     total_available = len(rows)
     rows.sort(key=lambda row: row["t_mid"])
     rows = sample_evenly(rows, max_images)
-    visits = assign_visits(rows, datasets["limits"]["epoch_gap_days"])
+    deep_field = any(row["survey"] == "deep" for row in rows)
+    limits = datasets["limits"]
+    visits = assign_visits(
+        rows, limits["epoch_gap_days"], limits["deep_field_window_days"] if deep_field else None
+    )
 
     if rows and has_motion(motion):
         target_ra, target_dec = propagate(motion, [row["t_mid"] for row in rows])
@@ -85,6 +89,7 @@ async def find_observations(
             "releases": release_ids,
             "detectors": detectors,
             "moving_target": has_motion(motion),
+            "deep_field": deep_field,
         },
         "total_available": total_available,
         "returned": len(rows),

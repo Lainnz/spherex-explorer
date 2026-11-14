@@ -49,6 +49,14 @@ def test_visits_split_on_gaps():
     assert visits[2]["label"] == f"Visit 3 · {mjd_to_date(61300.0)}"
 
 
+def test_deep_field_windows_split_continuous_coverage():
+    # One image a day for 60 days: no gaps, so only the window rule splits it.
+    rows = [{"t_mid": 61000.0 + day} for day in range(60)]
+    assert len(assign_visits(rows, gap_days=20)) == 1
+    visits = assign_visits(rows, gap_days=20, max_span_days=14)
+    assert [v["n_images"] for v in visits] == [15, 15, 15, 15]
+
+
 def test_visits_sort_rows_first():
     rows = [{"t_mid": t} for t in (61200.0, 61000.0, 61001.0)]
     assign_visits(rows, gap_days=20)

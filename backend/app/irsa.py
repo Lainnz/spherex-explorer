@@ -38,24 +38,19 @@ def _limit() -> asyncio.Semaphore:
     return _semaphore
 
 
-async def fetch_sia(collection: str, ra: float, dec: float, radius_deg: float) -> bytes:
-    """Run one SIA search and return the raw VOTable answer.
+async def _get(url: str, params: dict) -> bytes:
+    """GET from IRSA, politely.
 
     Fast failures (busy server, dropped connection) are retried with growing pauses.
     A timeout is not retried: it already waited minutes.
     """
-    params = {
-        "COLLECTION": collection,
-        "POS": f"circle {ra:.6f} {dec:.6f} {radius_deg:.6f}",
-        "RESPONSEFORMAT": "VOTABLE",
-    }
     headers = {"User-Agent": USER_AGENT}
     last_error: Exception | None = None
     async with httpx.AsyncClient(timeout=settings.irsa_timeout_s, headers=headers) as client:
         for attempt in range(RETRIES):
             try:
                 async with _limit():
-                    response = await client.get(SIA_URL, params=params)
+                    response = await client.get(url, params=params)
                 if response.status_code < 500:
                     response.raise_for_status()
                     return response.content
@@ -66,6 +61,35 @@ async def fetch_sia(collection: str, ra: float, dec: float, radius_deg: float) -
                 last_error = error
             await asyncio.sleep(2 * 2**attempt)
     raise IrsaUnavailable(str(last_error)) from last_error
+
+
+async def fetch_sia(collection: str, ra: float, dec: float, radius_deg: float) -> bytes:
+    """Run one SIA search and return the raw VOTable answer."""
+    params = {
+        "COLLECTION": collection,
+        "POS": f"circle {ra:.6f} {dec:.6f} {radius_deg:.6f}",
+        "RESPONSEFORMAT": "VOTABLE",
+    }
+    return await _get(SIA_URL, params)
+
+
+async def fetch_cutout(access_url: str, ra: float, dec: float, size_deg: float) -> bytes:
+    """A small piece of one SPHEREx image (all its extensions), cached forever.
+
+    IRSA's cutout service crops IMAGE/FLAGS/VARIANCE/ZODI and keeps the EPSF table
+    whole, so each cutout is ~4 MB whatever its size (docs/DATA_NOTES.md).
+    """
+    center = f"{ra:.5f},{dec:.5f}"
+    size = f"{size_deg:.5f}"
+    key = f"cutout:{access_url}:{center}:{size}"
+    cache = get_cache()
+    content = cache.get(key)
+    if content is None:
+        content = await _get(access_url, {"center": center, "size": size})
+        if not content.startswith(b"SIMPLE"):
+            raise IrsaUnavailable("IRSA's cutout service didn't return a FITS file")
+        cache.set(key, content)
+    return content
 
 
 def parse_sia(content: bytes, release: str, survey: str) -> list[dict]:

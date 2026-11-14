@@ -15,4 +15,9 @@ DAY = 24 * HOUR
 
 @lru_cache
 def get_cache() -> Cache:
-    return Cache(str(settings.cache_dir), size_limit=int(settings.cache_max_gb * 1024**3))
+    # When full, drop whatever was used longest ago (cutouts of old searches).
+    return Cache(
+        str(settings.cache_dir),
+        size_limit=int(settings.cache_max_gb * 1024**3),
+        eviction_policy="least-recently-used",
+    )
