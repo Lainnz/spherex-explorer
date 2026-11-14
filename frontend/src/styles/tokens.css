@@ -1,0 +1,32 @@
+/* Design tokens (PLAN.md §8.1). Change colours and fonts here, not in components. */
+:root {
+  /* Night sky + white, with a Zooniverse-inspired teal accent */
+  --night-sky: #050a18;
+  --navy: #011939;
+  --panel-border: #1e3256;
+  --white: #ffffff;
+  --soft-white: #e8eef7;
+  --muted: #8fa3bf;
+  --teal: #00979d;
+  --teal-hover: #00b5bc;
+  --amber: #f0b200;
+  --error: #e45950;
+  --light-surface: #f5f7fa;
+
+  /* Detector colours (Okabe–Ito, colour-blind safe) */
+  --det-1: #0072b2;
+  --det-2: #56b4e9;
+  --det-3: #009e73;
+  --det-4: #f0e442;
+  --det-5: #e69f00;
+  --det-6: #d55e00;
+
+  /* Exactly three fonts */
+  --font-display: 'Orbitron Variable', 'Segoe UI', sans-serif;
+  --font-ui: 'Exo 2 Variable', 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono Variable', Consolas, monospace;
+
+  --radius: 8px;
+  --panel-bg: rgb(1 25 57 / 0.72);
+  --focus-glow: 0 0 0 2px var(--night-sky), 0 0 0 4px var(--teal), 0 0 12px rgb(0 151 157 / 0.6);
+}

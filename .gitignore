@@ -3,6 +3,7 @@
 __pycache__/
 .pytest_cache/
 scripts/scratch/
+backend/cache/
 
 # Logs
 logs

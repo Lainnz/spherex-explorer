@@ -1,0 +1,119 @@
+/* Page-wide defaults shared by every page. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--night-sky);
+  color: var(--soft-white);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--white);
+}
+
+a {
+  color: var(--teal-hover);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-top: 2px solid var(--teal);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  backdrop-filter: blur(8px);
+}
+
+/* Weak devices / no blur support: solid navy instead of glass. */
+@supports not (backdrop-filter: blur(8px)) {
+  .panel {
+    background: var(--navy);
+  }
+}
+
+.btn {
+  display: inline-block;
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--radius);
+  background: var(--teal);
+  color: var(--white);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.btn:hover {
+  background: var(--teal-hover);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-glow);
+  border-radius: var(--radius);
+}
+
+.status {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.status[data-state='online']::before,
+.status[data-state='offline']::before {
+  content: '';
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-right: 0.4rem;
+  border-radius: 50%;
+  background: var(--teal-hover);
+}
+
+.status[data-state='offline']::before {
+  background: var(--amber);
+}
+
+.site-footer {
+  margin-top: auto;
+  padding: 1.5rem 1rem;
+  border-top: 1px solid var(--panel-border);
+  color: var(--muted);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+.site-footer p {
+  max-width: 60rem;
+  margin: 0.4rem auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

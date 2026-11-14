@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stellar View · SPHEREx Xplorer</title>
+    <meta name="description" content="Stellarium-style sky view of NASA SPHEREx infrared images with a time slider." />
+    <meta name="theme-color" content="#050A18" />
+    <link rel="icon" href="/brand/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" href="/brand/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
+    <script type="module" src="/src/stellar/main.js"></script>
+  </head>
+  <body class="page-stellar">
+    <header class="site-header">
+      <a href="./" class="header-logo" aria-label="SPHEREx Xplorer home">
+        <picture>
+          <source srcset="/brand/logo-horizontal-white.webp" type="image/webp" />
+          <img src="/brand/logo-horizontal-white.png" alt="SPHEREx Xplorer" width="1600" height="534" />
+        </picture>
+      </a>
+      <span class="status" data-health>Checking the data server…</span>
+    </header>
+
+    <main class="stellar-main">
+      <section class="panel placeholder">
+        <h1>Stellar View</h1>
+        <p>The sky viewer, time slider and data panels arrive in Phases 7–9.</p>
+        <p>This page already reads its address (URL). Here is what it understood:</p>
+        <dl class="url-readout mono" data-url-readout></dl>
+        <a class="btn" href="./">Back to the title page</a>
+      </section>
+    </main>
+    <footer class="site-footer" data-footer></footer>
+  </body>
+</html>
