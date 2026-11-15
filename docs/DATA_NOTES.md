@@ -245,10 +245,26 @@ Search radius 0.01° around each target's mid-2026 predicted position.
   53/59 RW Aurigae and 41/41 R Draconis images: these stars are too bright for SPHEREx.
   Saturated points now report `flux_ujy: null` and `saturated: true`. Skipping the
   overflowed pixels had produced meaningless values near 0. The stream's `done` message
-  warns when over half the points are saturated. **So the plan's check "R Draconis should
-  vary" can't be met with photometry.** Its variation is visible in the Phase 3 contact
-  sheet. Idea for later: measure saturated stars from the unsaturated "wings" (a ring
-  around the core) as a relative light curve.
+  warns when over half the points are saturated.
+- **Wing light curves for saturated stars** (`wing_level`, `relative_light_curve` in
+  `photometry.py`; `scripts/wing_lightcurves.py`). Average glow 3–6 px from the centre
+  (flagged pixels skipped) minus sky 10–14 px out, divided by each detector's typical
+  level. A test with a fake saturated star gives a 2.00× wing ratio for a 2× brighter star.
+  Within a detector, a red star's brightness rises with wavelength: Barnard's Star's D1
+  wing scatter correlated +0.95 with wavelength. So a straight line in log(level) vs
+  wavelength is fitted per detector and divided out. Results (2026-11-14):
+  - Barnard's Star (control, steady): all detectors within 0.71–1.27, mostly ±10–20%.
+    That's the method's precision.
+  - **R Draconis: D1 rises from 0.53–1.05 (Sep–Nov 2025) to 1.55–2.90 (Jul–Aug 2026),
+    about 3×.** Well beyond the control, with neighbouring points agreeing: the
+    variability is detected. At the same wavelength (≈0.846 µm) it went from 0.40 to 2.18
+    before the colour correction. Only 31 of 71 images were usable (bloom or halos often
+    cover the wing or sky rings).
+  - RW Aurigae: up to 0.61–1.85 in D4–D6, more than the control (plausible T Tauri
+    variability, less clear-cut).
+  - Correction: the Phase 3 report's eyeball reading of R Dra's contact sheet ("faint
+    again by summer 2026") mixed wavelengths and detectors. The measured curve shows it
+    brighter in Jul–Aug 2026 than in Sep 2025.
 - **Blending (WISE 0855).** A Gaia star (G = 16.3) lies within the 2-pixel (12″) circle
   around WISE 0855's 2025–26 positions. It dominates the light below ~2 µm, and as WISE 0855
   moves past it the D3 "light curve" changes (4.85×). WISE 0855's own light shows at

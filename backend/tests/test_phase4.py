@@ -104,6 +104,56 @@ def test_saturated_star_reports_no_value():
     assert "OVERFLOW" in point["bad_flags_in_aperture"]
 
 
+def saturated_star(total: float, seed: int) -> tuple[bytes, float, float]:
+    """A bright star with broad wings (two Gaussians) whose centre overflowed."""
+    content, ra, dec, _ = synthetic_cutout(star_total=0.0, seed=seed)
+    with fits.open(io.BytesIO(content)) as hdul:
+        rows, cols = np.indices(hdul["IMAGE"].data.shape)
+        r2 = (cols - 29.3) ** 2 + (rows - 30.6) ** 2
+        core = 0.9 * np.exp(-r2 / 2) / (2 * np.pi)
+        wings = 0.1 * np.exp(-r2 / (2 * 3.0**2)) / (2 * np.pi * 9)
+        hdul["IMAGE"].data = hdul["IMAGE"].data + (total * (core + wings)).astype(np.float32)
+        overflow = 1 << flag_definitions(hdul["FLAGS"].header)["OVERFLOW"]["bit"]
+        hdul["FLAGS"].data[r2 <= 2.5**2] = overflow  # a brighter star would overflow more, too
+        buffer = io.BytesIO()
+        hdul.writeto(buffer)
+    return buffer.getvalue(), ra, dec
+
+
+def test_wing_level_tracks_brightness_of_a_saturated_star():
+    faint, ra, dec = saturated_star(total=5000.0, seed=1)
+    bright, _, _ = saturated_star(total=10000.0, seed=2)
+    a, b = measure(faint, ra, dec, **MEASURE), measure(bright, ra, dec, **MEASURE)
+    assert a["saturated"] and a["flux_ujy"] is None
+    assert b["wing_mjy_sr"] / a["wing_mjy_sr"] == pytest.approx(2.0, rel=0.03)
+
+
+def test_relative_light_curve_normalises_per_detector():
+    from app.photometry import relative_light_curve
+
+    points = [
+        {"detector": 1, "t_mid": 1.0, "wing_mjy_sr": 2.0, "wing_err_mjy_sr": 0.1},
+        {"detector": 1, "t_mid": 2.0, "wing_mjy_sr": 4.0, "wing_err_mjy_sr": 0.1},
+        {"detector": 1, "t_mid": 3.0, "wing_mjy_sr": 3.0, "wing_err_mjy_sr": 0.1},
+        {"detector": 6, "t_mid": 1.5, "wing_mjy_sr": 100.0, "wing_err_mjy_sr": 1.0},
+        {"detector": 6, "t_mid": 2.5, "wing_mjy_sr": None, "wing_err_mjy_sr": None},
+    ]
+    curve = relative_light_curve(points)
+    assert [round(c["relative"], 3) for c in curve if c["detector"] == 1] == [0.667, 1.333, 1.0]
+    assert [c["relative"] for c in curve if c["detector"] == 6] == [1.0]
+
+
+def test_relative_light_curve_removes_the_colour_trend_of_a_steady_star():
+    from app.photometry import relative_light_curve
+
+    # A steady red star: brighter at longer wavelengths only, never in time.
+    points = [{"detector": 1, "t_mid": float(i), "wavelength_um": wl, "wing_mjy_sr": 2.0 * math.exp(4 * wl),
+               "wing_err_mjy_sr": 0.01} for i, wl in enumerate([0.75, 0.80, 0.85, 0.95, 1.00, 1.05])]
+    curve = relative_light_curve(points)
+    assert all(c["colour_corrected"] for c in curve)
+    assert all(c["relative"] == pytest.approx(1.0, abs=1e-6) for c in curve)
+
+
 def test_measure_empty_sky_is_about_zero():
     content, ra, dec, _ = synthetic_cutout(star_total=0.0)
     point = measure(content, ra, dec, **MEASURE)
@@ -138,6 +188,7 @@ def test_photometry_stream(fake_cutouts):
     assert all(p["detector"] == 3 and p["flux_ujy"] > 0 for p in points)
     assert all("saturated" in p and "bad_flags_in_aperture" in p for p in points)
     assert messages[-1]["saturated"] == sum(p["saturated"] for p in points)
+    assert isinstance(messages[-1]["relative_light_curve"], list)
 
 
 def test_photometry_rejects_bad_apertures():
