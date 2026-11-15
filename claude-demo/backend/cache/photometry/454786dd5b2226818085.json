@@ -1,0 +1,1 @@
+{"obs_id": "2025W38_1A_0617_1", "band": "SPHEREx-D5", "time_utc": "2025-09-17T12:18:22Z", "time_mjd": 60935.512761, "wavelength_um": 4.3531, "bandwidth_um": 0.0379, "usable": false, "reason": "flagged pixels at the source centre", "masked_fraction": 0.273, "flags_in_aperture": ["NONFUNC", "SOURCE", "SUR_ERROR", "TRANSIENT"]}

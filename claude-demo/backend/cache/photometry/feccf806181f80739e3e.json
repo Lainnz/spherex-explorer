@@ -1,0 +1,1 @@
+{"obs_id": "2025W39_1A_0052_3", "band": "SPHEREx-D6", "time_utc": "2025-09-22T06:23:53Z", "time_mjd": 60940.266587, "wavelength_um": 5.0161, "bandwidth_um": 0.0374, "usable": false, "reason": "too close to the image edge"}
