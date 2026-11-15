@@ -219,6 +219,7 @@
           <button role="tab" aria-selected="false" aria-controls="tab-spectrum" id="tab-spectrum-button">Spectrum</button>
           <button role="tab" aria-selected="false" aria-controls="tab-curve" id="tab-curve-button">Light curve</button>
           <button role="tab" aria-selected="false" aria-controls="tab-chemistry" id="tab-chemistry-button">Chemistry</button>
+          <button role="tab" aria-selected="false" aria-controls="tab-planets" id="tab-planets-button">Planets</button>
           <button role="tab" aria-selected="false" aria-controls="tab-guide" id="tab-guide-button">Guide</button>
         </div>
 
@@ -307,6 +308,18 @@
             <button type="button" class="small-button" data-preset="prelife" aria-pressed="false">Signs of pre-life chemistry</button>
             <label class="toggles"><input type="checkbox" id="match-any" /> Any of them (not all)</label>
           </div>
+          <div class="percent-row">
+            <label>Published amount
+              <select id="percent-ingredient">
+                <option value="">any</option>
+                <option value="co2_ice">CO₂ ice</option>
+                <option value="co_ice">CO ice</option>
+                <option value="ch3oh_ice">Methanol ice</option>
+              </select>
+            </label>
+            <label>at least <input id="percent-min" type="number" min="0" max="100" step="1" inputmode="numeric" placeholder="%" /> % of water ice</label>
+            <button type="button" class="help" data-help="Ices are measured relative to water ice, the most common one. For example, CO₂ at 20% means 20 CO₂ molecules for every 100 water molecules in the ice. Only places where a paper gives a number are kept.">?</button>
+          </div>
           <p class="note small" data-chem-count role="status" aria-live="polite"></p>
           <ul class="chem-list" data-chem-results></ul>
           <h3 class="panel-heading">Check this spot with SPHEREx <button type="button" class="help" data-help="Measures this spot in every SPHEREx image (the same measurements as the Spectrum tab), then how deep the water, CO₂ and CO ice dips are and how strong the 3.3 µm carbon (PAH) glow is.">?</button></h3>
@@ -322,12 +335,36 @@
             </p>
           </details>
         </section>
+        <section id="tab-planets" role="tabpanel" aria-labelledby="tab-planets-button" class="tab-body chemistry" hidden>
+          <h3 class="panel-heading">Planets like Earth? <button type="button" class="help" data-help="Every confirmed planet around another star, from NASA's Exoplanet Archive. Filter by what life as we know it needs: a rocky size, starlight that allows liquid water (the habitable zone), a mild temperature, and molecules measured in its air. ESI = Earth Similarity Index, from 0 (nothing like Earth) to 1 (identical).">?</button></h3>
+          <div data-planet-filters>
+            <label class="field"><span>Name</span><input id="planet-search" type="search" placeholder="e.g. TRAPPIST-1, K2-18 b" spellcheck="false" /></label>
+            <div class="ingredient-chips" data-planet-sizes role="group" aria-label="Size"></div>
+            <div class="button-row">
+              <button type="button" class="small-button" data-preset="earthlike">Earth-like: rocky size + habitable zone</button>
+              <label class="toggles"><input type="checkbox" id="planet-hz" /> In the habitable zone</label>
+            </div>
+            <div class="percent-row">
+              <label>Temperature <input id="planet-tmin" type="number" step="10" placeholder="min" aria-label="Lowest temperature, kelvin" />–<input id="planet-tmax" type="number" step="10" placeholder="max" aria-label="Highest temperature, kelvin" /> K</label>
+              <label>Within <input id="planet-dist" type="number" min="0" step="10" placeholder="any" aria-label="Largest distance, light-years" /> light-years</label>
+              <label>ESI ≥ <input id="planet-esi" type="number" min="0" max="1" step="0.05" placeholder="0–1" aria-label="Lowest Earth Similarity Index" /></label>
+              <label>Air contains <select id="planet-molecule"><option value="">any or unknown</option></select></label>
+            </div>
+          </div>
+          <p class="note small" data-planets-status role="status" aria-live="polite">Open this tab to load the planet list.</p>
+          <section class="panel planet-profile" data-planet-profile hidden aria-label="Planet compared with Earth"></section>
+          <div class="saved-planets" data-planets-saved hidden>
+            <h4 class="popup-subhead">Your saved planets</h4>
+            <ul class="saved-list"></ul>
+          </div>
+          <ul class="chem-list" data-planets-results></ul>
+        </section>
         <section id="tab-guide" role="tabpanel" aria-labelledby="tab-guide-button" class="tab-body guide" hidden>
           <h3 class="panel-heading">Why use SPHEREx Xplorer</h3>
           <ul class="guide-goals why-list">
             <li><strong>The data, visualised.</strong> SPHEREx's 102 infrared colours as a false-colour sky, images that play over time, and spectra and light curves as charts, straight from NASA's archive.</li>
             <li><strong>Extra information.</strong> Click any star for what it is, how far away and how fast it moves (SIMBAD, Gaia, AllWISE), with a "?" on every control and this guide.</li>
-            <li><strong>Search by what's there.</strong> The <em>Chemistry</em> tab finds places with water ice, CO₂, CO, methanol or carbon molecules, or "signs of pre-life chemistry", each backed by a published paper, and checks any spot with SPHEREx's own spectrum.</li>
+            <li><strong>Search by what's there.</strong> The <em>Chemistry</em> tab finds places with water ice, CO₂, CO, methanol or carbon molecules (even by how much, as a % of the water ice), or "signs of pre-life chemistry", each backed by a published paper, and checks any spot with SPHEREx's own spectrum. The <em>Planets</em> tab filters every known exoplanet by what life needs and compares it with Earth.</li>
           </ul>
           <h3 class="panel-heading">What SPHEREx sees</h3>
           <p>

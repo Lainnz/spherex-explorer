@@ -1011,3 +1011,46 @@ select optgroup {
 }
 .server-banner p { margin: 0; }
 .server-banner code { font-family: var(--font-mono); font-size: 0.75rem; color: var(--soft-white); word-break: break-all; }
+
+.percent-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  margin: 0.3rem 0;
+  font-size: 0.78rem;
+}
+.percent-row input { width: 4.2rem; }
+.percent-row select, .percent-row input {
+  background: var(--night-sky);
+  color: var(--soft-white);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 0.15rem 0.3rem;
+}
+
+/* --- Milestone 4: Planets tab ---------------------------------------------------------- */
+[data-planet-filters] .field input,
+#planet-tmin, #planet-tmax, #planet-dist, #planet-esi, #planet-molecule {
+  background: var(--night-sky);
+  color: var(--soft-white);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 0.15rem 0.3rem;
+}
+#planet-tmin, #planet-tmax, #planet-dist, #planet-esi { width: 4.4rem; }
+[data-planet-filters] .field input { width: 100%; }
+.planet-profile {
+  margin: 0.5rem 0;
+  padding: 0.6rem 0.7rem;
+}
+.profile-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+.profile-head h3 { margin: 0; font-size: 0.95rem; }
+.planet-profile .close { background: none; border: none; color: var(--soft-white); font-size: 1.2rem; cursor: pointer; }
+.earth-table tr.is-similar th { box-shadow: inset 3px 0 0 #009e73; }
+.earth-table tr.is-different th { box-shadow: inset 3px 0 0 #d55e00; }
+.earth-table th, .earth-table td { padding-left: 0.4rem; }
+.planet-profile a.small-button { text-decoration: none; display: inline-block; }
+.saved-list { list-style: none; padding: 0; margin: 0.3rem 0 0.6rem; display: grid; gap: 0.3rem; font-size: 0.8rem; }
+.saved-list small { display: block; color: var(--muted); }
+.saved-list .link-button { background: none; border: none; padding: 0; color: var(--teal-hover); cursor: pointer; font: inherit; text-decoration: underline; }

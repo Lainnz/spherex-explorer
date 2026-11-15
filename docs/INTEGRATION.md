@@ -57,18 +57,20 @@ Milestone 2; it's still on the `elaine-demo` branch.
    τ = ln(continuum / band) from the live spectrum, ≥ 3σ = seen). Both search boxes accept
    ingredient words ("water ice", "carbon", "pre-life"). "Why use SPHEREx Xplorer" in the
    Guide tab and README.
-4. **Life-ingredient filters, Earth comparison, favourites:**
-   - Filter on the Explore page: find places by ingredients life needs, with numbers.
-     *SPHEREx ice clouds:* ice amounts as published (e.g. CO₂ or CO as a % of water ice,
-     water-ice column), plus organics (PAH, aliphatic carbon). *Planets:* NASA Exoplanet
-     Archive values (radius, mass, temperature, sunlight received, in the habitable zone),
-     with water / atmosphere detections only where a paper reports them.
-   - Planet profile comparing each planet with Earth: similarities, differences and an
-     Earth Similarity Index (formula shown). Every number names its source; nothing is
-     guessed.
-   - Add a planet or place to **favourites** and come back to it later (saved on this
-     device, building on Alice's favourites list), with what changed since the last visit
-     where the data allows.
+4. **Life-ingredient filters, Earth comparison, favourites** (done):
+   - Chemistry tab: "at least N% of water ice" for CO₂, CO or methanol ice (published values only);
+     ★ Save on every place.
+   - Planets tab: every confirmed exoplanet from NASA's Exoplanet Archive (`/api/planets`,
+     pscomppars, cached a day, stale copy if the archive is down). Filters: size class (Kepler
+     convention), habitable zone (Kopparapu et al. 2013/2014 conservative limits, 2600–7200 K
+     stars), temperature, distance, minimum ESI, and molecules measured in the air (published
+     list in `config/planet_atmospheres.json`: WASP-39 b, K2-18 b). Ranked by Earth Similarity
+     Index (Schulze-Makuch et al. 2011 weights, only known properties, equilibrium temperature as
+     stand-in). Profile: planet vs Earth table, like/unlike Earth, ESI parts, formulas, sources.
+   - Favourites to check back on: saved planets remember their values and show what the archive
+     updated; saved places tell you how many new SPHEREx images arrived since your last visit.
+   - Exoplanet compositions (e.g. "% water") are not measured for almost any planet; the site says
+     so instead of guessing.
 
 ## Honesty rules carried over from both demos
 - Never fabricate data. Decorative visuals are labelled as such.

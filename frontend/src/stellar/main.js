@@ -27,7 +27,7 @@ import { loadFrames } from './frames-source.js';
 import { setupInfoPanel } from './info-panel.js';
 import { setupLayers } from './layers.js';
 import { setupListsMenu } from './lists-menu.js';
-import { parseRegion } from './nav-math.js';
+import { parseRegion, separationArcsec } from './nav-math.js';
 import { setupNavTools } from './nav-tools.js';
 import { setupObjectPopup } from './object-popup.js';
 import { setupOperations } from './operations.js';
@@ -35,6 +35,8 @@ import { setupPhotometry } from './photometry-panel.js';
 import { setupTabs } from './tabs.js';
 import { setupTargetReadout } from './target-readout.js';
 import { setupChemistryPanel } from './chemistry-panel.js';
+import { setupPlanetsPanel } from './planets-panel.js';
+import { favourites } from '../shared/store.js';
 import { createSequence } from './sequence.js';
 import { createSkyView, NO_SERVER_MAP, SKY_MAPS } from './sky-view.js';
 import { setupTimeBar } from './time-bar.js';
@@ -163,6 +165,7 @@ async function loadObservations(sky, place, live) {
       status.textContent = `${observations.total_available} SPHEREx images in ${observations.visits.length} visits (${releases}).`;
       if (observations.warning) status.textContent += ' Some data is missing for now (see message).';
       warnOnce(observations.warning);
+      checkBackSaved(place, observations.total_available);
       return;
     } catch (error) {
       status.textContent = error.message;
@@ -414,6 +417,24 @@ function showServerBanner() {
   banner.querySelector('[data-close]').addEventListener('click', () => { banner.hidden = true; });
 }
 
+/**
+ * "Check back later" for saved places: if this spot is in your favourites, say how many new
+ * SPHEREx images arrived since your last visit (SPHEREx returns about every six months, and
+ * QR3 adds images weekly), then remember the new count.
+ */
+function checkBackSaved(place, imageCount) {
+  if (!Number.isFinite(imageCount)) return;
+  const saved = favourites.list().find((item) => Number.isFinite(item.ra)
+    && separationArcsec(item.ra, item.dec, place.ra, place.dec) < 60);
+  if (!saved) return;
+  const before = saved.seen_images;
+  if (Number.isFinite(before) && imageCount > before) {
+    const since = new Date(saved.checked ?? saved.added).toLocaleDateString();
+    toast(`★ ${saved.name}: ${imageCount - before} new SPHEREx image${imageCount - before === 1 ? '' : 's'} since your last visit (${since}).`, 'info', 12);
+  }
+  favourites.update(saved.id, { seen_images: imageCount, checked: new Date().toISOString() });
+}
+
 async function main() {
   notices.forEach((notice) => toast(notice, 'warning', 9));
 
@@ -524,8 +545,10 @@ async function main() {
   };
   setupListsMenu($('[data-lists]'));
   const photometry = setupPhotometry({ spectrumTab: $('#tab-spectrum'), curveTab: $('#tab-curve'), state, live, getDemo });
+  let planetsPanel = null;
   const tabs = setupTabs($('.drawer'), {
     onShow: (panelId) => {
+      if (panelId === 'tab-planets') planetsPanel?.open();
       if (panelId !== 'tab-spectrum' && panelId !== 'tab-curve') return;
       if (!photometry.subject()) photometry.measure(targetSubject()); // measured when first needed
       photometry.refresh();
@@ -535,6 +558,8 @@ async function main() {
     root: $('#tab-chemistry'), state, home, live, photometry, subject: targetSubject, onChange: writeUrl, toast,
   });
   if (state.find) tabs.open('tab-chemistry');
+  planetsPanel = setupPlanetsPanel({ root: $('#tab-planets'), state, live, toast, onChange: writeUrl });
+  if (state.planet) tabs.open('tab-planets');
   setupInfoPanel({ root: $('#tab-info'), sequence: images.sequence, state, live, getDemo });
   setupFlagsPanel({
     root: $('#tab-flags'), sequence: images.sequence, overlay: images.overlay, state, live, getDemo,

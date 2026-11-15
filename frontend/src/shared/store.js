@@ -48,6 +48,13 @@ export function createList(name) {
       write(name, read(name).filter((item) => item.id !== id));
       listeners.forEach((fn) => fn(name));
     },
+    /** Change some fields of a saved item (e.g. what was seen last time), keeping the rest. */
+    update(id, changes) {
+      if (!this.has(id)) return;
+      write(name, read(name).map((item) => (item.id === id ? { ...item, ...changes } : item)));
+      listeners.forEach((fn) => fn(name));
+    },
+    get: (id) => read(name).find((item) => item.id === id) ?? null,
     toggle(item) {
       if (this.has(item.id)) this.remove(item.id);
       else this.add(item);

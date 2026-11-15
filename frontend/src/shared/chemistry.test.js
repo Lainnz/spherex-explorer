@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BANDS, chemistryQuery, findTargets, formatPercent, INGREDIENTS, measureFeature, TARGETS } from './chemistry.js';
+import { BANDS, chemistryQuery, findTargets, formatPercent, INGREDIENTS, measureFeature, publishedPercent, TARGETS } from './chemistry.js';
 import { readStellarState, stellarParams } from './url-state.js';
 
 const CONTEXT = { limits: { min_fov_arcsec: 30, max_fov_arcsec: 3600 }, releases: ['dr1', 'qr3'], skyMaps: ['spherex_rgb'] };
@@ -43,6 +43,12 @@ describe('findTargets', () => {
       expect(t.ingredients.h2o_ice).toBeDefined();
       expect(Boolean(t.ingredients.ch3oh_ice || t.ingredients.pah || t.ingredients.aliphatic)).toBe(true);
     }
+  });
+  it('filters by a published amount relative to water ice', () => {
+    const rich = findTargets({ minPercent: { id: 'co2_ice', value: 20 } });
+    expect(rich.length).toBeGreaterThan(0);
+    for (const t of rich) expect(publishedPercent(t, 'co2_ice')).toBeGreaterThanOrEqual(20);
+    expect(findTargets({ minPercent: { id: 'ch3oh_ice', value: 25 } }).map((t) => t.id)).toEqual(['rafgl7009s']);
   });
   it('formats published amounts', () => {
     expect(formatPercent([10, 20])).toBe('10–20%');

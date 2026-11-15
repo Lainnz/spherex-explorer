@@ -19,6 +19,9 @@ changing objects stand out. Built for the NASA Space Apps "SPHEREx Open Data" ch
 - **Search by filters:** find places with water ice, CO₂, CO, methanol or carbon molecules,
   or "signs of pre-life chemistry", from a cited list (`config/chemistry.json`), and check
   any spot's ice and carbon features live with SPHEREx. Try typing *water ice* in the search.
+- **Planets vs Earth:** filter every confirmed exoplanet (NASA Exoplanet Archive) by size,
+  habitable zone, temperature and molecules measured in its air, see how each compares with
+  Earth (Earth Similarity Index), and ★ save planets and places to check back on later.
 
 ## Run it on your computer (Windows 11, PowerShell)
 You need Node.js, Python 3.12 and Git (see PLAN.md, Part 1).
@@ -72,6 +75,7 @@ is funded by the National Aeronautics and Space Administration.
 - SPHEREx Quick Release 3: [doi:10.26131/IRSA662](https://doi.org/10.26131/IRSA662)
 - Data served by the NASA/IPAC Infrared Science Archive (IRSA).
 - Gaia DR3 (ESA), WISE / AllWISE / unWISE (NASA), 2MASS.
+- This research has made use of the NASA Exoplanet Archive, which is operated by the California Institute of Technology, under contract with NASA under the Exoplanet Exploration Program.
 - Sky viewer: [Aladin Lite](https://aladin.cds.unistra.fr/AladinLite/) and SIMBAD, CDS, Strasbourg.
 - Analysis: [Astropy](https://www.astropy.org/), astroquery, pyvo, reproject.
 - Fonts: Orbitron, Exo 2, JetBrains Mono (SIL Open Font License).

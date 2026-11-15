@@ -1,0 +1,29 @@
+{
+  "_note": "Published atmosphere detections for the Planets tab (Milestone 4). Only molecules a paper reports as detected; disputed claims are listed under 'disputed'. Names match the NASA Exoplanet Archive's pl_name. Compiled 2026-11-15.",
+  "molecules": {
+    "h2o": "Water vapour (H₂O)",
+    "co2": "Carbon dioxide (CO₂)",
+    "co": "Carbon monoxide (CO)",
+    "ch4": "Methane (CH₄)",
+    "so2": "Sulfur dioxide (SO₂)"
+  },
+  "planets": {
+    "WASP-39 b": {
+      "detected": ["h2o", "co2", "co", "so2"],
+      "summary": "A hot (about 1,100 K) Saturn-mass gas giant. JWST found water, CO₂, CO and the first sulfur dioxide seen on an exoplanet, made by starlight-driven chemistry.",
+      "references": [
+        { "label": "JWST ERS team 2023, Nature (CO₂ detection)", "url": "https://par.nsf.gov/biblio/10469071" },
+        { "label": "Powell et al. 2024, Nature 626, 979 (SO₂ with MIRI)", "url": "https://doi.org/10.1038/s41586-024-07040-9" }
+      ]
+    },
+    "K2-18 b": {
+      "detected": ["ch4", "co2"],
+      "disputed": ["h2o"],
+      "summary": "A sub-Neptune in its star's habitable zone. JWST detected methane and CO₂; an earlier water-vapour claim from Hubble is now thought to be methane, and whether it has an ocean is debated.",
+      "references": [
+        { "label": "Madhusudhan et al. 2023, ApJL 956, L13", "url": "https://doi.org/10.3847/2041-8213/acf577" },
+        { "label": "Tennyson & Yurchenko 2025, Nature Reviews Physics", "url": "https://doi.org/10.1038/s42254-025-00856-y" }
+      ]
+    }
+  }
+}

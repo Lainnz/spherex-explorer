@@ -64,6 +64,8 @@ export function readStellarState(search, { limits, releases, skyMaps }) {
     else bad('coords', 'not coordinates we can read');
   }
   if (params.get('target')) state.target = params.get('target').slice(0, 100);
+  // planet=K2-18 b: open the Planets tab on this planet's profile (Milestone 4).
+  if (params.get('planet')) state.planet = params.get('planet').slice(0, 100);
 
   if (params.has('fov')) {
     const fov = parseFov(params.get('fov'));
@@ -171,6 +173,7 @@ export function stellarParams(state) {
     params.set('dec', state.dec.toFixed(5));
   }
   if (state.target) params.set('target', state.target);
+  if (state.planet) params.set('planet', state.planet);
   if (Number.isFinite(state.fov)) params.set('fov', round(state.fov, 2));
   if (state.rot) params.set('rot', round(state.rot, 1));
   if (state.t) params.set('t', state.t);

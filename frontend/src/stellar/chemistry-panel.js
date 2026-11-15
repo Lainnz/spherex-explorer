@@ -5,6 +5,7 @@
  * SPHEREx's own spectrum (band depths from shared/chemistry.js).
  */
 import { BANDS, DETECTION_SIGMA, findTargets, formatPercent, INGREDIENTS, measureFeature, PRESETS } from '../shared/chemistry.js';
+import { favourites } from '../shared/store.js';
 import { buildStellarUrl } from '../shared/url-state.js';
 import { separationArcsec } from './nav-math.js';
 
@@ -24,6 +25,8 @@ export function setupChemistryPanel({ root, state, home, live, photometry, subje
   const results = root.querySelector('[data-chem-results]');
   const checkButton = root.querySelector('[data-chem-check]');
   const liveBox = root.querySelector('[data-chem-live]');
+  const percentId = root.querySelector('#percent-ingredient');
+  const percentValue = root.querySelector('#percent-min');
 
   const query = { ingredients: [...(state.find?.ingredients ?? [])], match: state.find?.match ?? 'all', preset: state.find?.preset };
 
@@ -41,14 +44,16 @@ export function setupChemistryPanel({ root, state, home, live, photometry, subje
     boxes.forEach((box) => { box.checked = query.ingredients.includes(box.value); });
     presetButton.setAttribute('aria-pressed', String(query.preset === 'prelife'));
     matchAny.checked = query.match === 'any';
-    const list = findTargets(query);
-    const asked = query.preset || query.ingredients.length;
+    const minPercent = percentId.value && percentValue.value !== '' ? { id: percentId.value, value: Number(percentValue.value) } : undefined;
+    const list = findTargets({ ...query, minPercent });
+    const asked = query.preset || query.ingredients.length || minPercent;
     count.textContent = asked
       ? `${list.length} place${list.length === 1 ? '' : 's'} with ${describeQuery()}.`
       : `All ${list.length} places in the list. Tick ingredients to narrow it down.`;
+    if (minPercent) count.textContent += ` Only places where a paper measured ${INGREDIENTS[minPercent.id].label.toLowerCase()} at ${minPercent.value}% of the water ice or more.`;
     if (query.preset) count.textContent += ` ${PRESETS[query.preset].explain}`;
     results.replaceChildren(...list.map(renderTarget));
-    state.find = asked ? { ...query } : undefined;
+    state.find = query.preset || query.ingredients.length ? { ...query } : undefined;
     onChange();
   }
 
@@ -57,6 +62,7 @@ export function setupChemistryPanel({ root, state, home, live, photometry, subje
     const parts = [];
     if (query.preset) parts.push(PRESETS[query.preset].label.toLowerCase());
     if (names.length) parts.push(names.join(query.match === 'any' ? ' or ' : ' and '));
+    if (!parts.length) parts.push('a published amount');
     return parts.join(', plus ');
   }
 
@@ -81,6 +87,22 @@ export function setupChemistryPanel({ root, state, home, live, photometry, subje
       <div class="ingredient-tags">${ingredientChips}</div>
       <p class="note small">Source: ${refs}</p>
       <div class="button-row"></div>`;
+    // ★ Save: a favourite you can come back to (header ★ list).
+    const id = `place:${target.id}`;
+    const save = document.createElement('button');
+    save.type = 'button';
+    save.className = 'small-button';
+    save.textContent = '★ Save';
+    save.setAttribute('aria-pressed', String(favourites.has(id)));
+    save.addEventListener('click', () => {
+      const saved = favourites.toggle({
+        id, kind: 'place', name: target.name, type: target.kind,
+        ...(target.ra != null ? { ra: target.ra, dec: target.dec } : { resolve: target.resolve }),
+      });
+      save.setAttribute('aria-pressed', String(saved));
+      if (saved && target.ra == null) toast(`Saved. ${target.name} will be looked up by name when you open it.`);
+    });
+    item.querySelector('.button-row').append(save);
     if (!here) {
       const go = document.createElement('button');
       go.type = 'button';
@@ -115,6 +137,8 @@ export function setupChemistryPanel({ root, state, home, live, photometry, subje
     query.match = matchAny.checked ? 'any' : 'all';
     show();
   });
+  percentId.addEventListener('change', show);
+  percentValue.addEventListener('input', show);
 
   // --- Live SPHEREx check of the current spot ---------------------------------------------
   let checking = false;

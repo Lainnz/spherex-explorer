@@ -21,7 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
 
-from . import __version__, irsa
+from . import __version__, irsa, planets
 from .config import load_datasets, load_targets
 from .flags import flag_summary
 from .frames import FrameOptions, frame_stream, grid_center
@@ -522,6 +522,15 @@ async def photometry(request: PhotometryRequest):
             yield ndjson_line(message)
 
     return StreamingResponse(lines(), media_type="application/x-ndjson")
+
+
+@app.get("/api/planets")
+async def planets_list():
+    """Every confirmed exoplanet (NASA Exoplanet Archive, cached a day): columns + rows."""
+    try:
+        return await run_in_threadpool(planets.load_planets, planets.fetch_archive)
+    except planets.PlanetsUnavailable as error:
+        return friendly_error(503, "planets_unavailable", str(error))
 
 
 @app.get("/api/object")

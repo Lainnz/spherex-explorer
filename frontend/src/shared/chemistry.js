@@ -29,13 +29,22 @@ export const BANDS = {
 /** A detection counts when the signal is at least this many standard deviations. */
 export const DETECTION_SIGMA = 3;
 
+/** The largest published amount of an ingredient, as % of water ice (null if none published). */
+export function publishedPercent(target, id) {
+  const value = target.ingredients[id]?.percent_of_h2o;
+  if (value == null) return null;
+  return Array.isArray(value) ? Math.max(...value) : value;
+}
+
 /**
  * Targets with the chosen ingredients.
- * @param {{ingredients?: string[], match?: 'all'|'any', preset?: string}} query
+ * @param {{ingredients?: string[], match?: 'all'|'any', preset?: string,
+ *          minPercent?: {id: string, value: number}}} query  minPercent: at least this % of water ice
+ *   (published upper value), e.g. {id: 'co2_ice', value: 15}
  * @param {object[]} [targets]
  * @returns {object[]} SPHEREx's own results first, then by how many chosen ingredients match
  */
-export function findTargets({ ingredients = [], match = 'all', preset } = {}, targets = TARGETS) {
+export function findTargets({ ingredients = [], match = 'all', preset, minPercent } = {}, targets = TARGETS) {
   const has = (target, id) => Boolean(target.ingredients[id]);
   let list = targets;
   if (preset) {
@@ -44,6 +53,9 @@ export function findTargets({ ingredients = [], match = 'all', preset } = {}, ta
   }
   if (ingredients.length) {
     list = list.filter((t) => (match === 'any' ? ingredients.some((id) => has(t, id)) : ingredients.every((id) => has(t, id))));
+  }
+  if (minPercent?.id && Number.isFinite(minPercent.value)) {
+    list = list.filter((t) => (publishedPercent(t, minPercent.id) ?? -1) >= minPercent.value);
   }
   const score = (t) => (t.spherex_result ? 100 : 0) + ingredients.filter((id) => has(t, id)).length;
   return [...list].sort((a, b) => score(b) - score(a) || a.name.localeCompare(b.name));
