@@ -34,7 +34,7 @@ import { setupOperations } from './operations.js';
 import { setupPhotometry } from './photometry-panel.js';
 import { setupTabs } from './tabs.js';
 import { createSequence } from './sequence.js';
-import { createSkyView, SKY_MAPS } from './sky-view.js';
+import { createSkyView, NO_SERVER_MAP, SKY_MAPS } from './sky-view.js';
 import { setupTimeBar } from './time-bar.js';
 import { dateToMjd } from './timeline.js';
 
@@ -384,6 +384,14 @@ async function main() {
   $('[data-target-name]').textContent = name;
   $('[data-embed-label]').textContent = name;
   document.title = `${name} · Stellar View · SPHEREx Xplorer`;
+
+  // The false-colour map is made by our data server; without it, show SPHEREx's own
+  // 102-colour map (still real SPHEREx data, served straight from NASA IRSA).
+  if (!live && SKY_MAPS[state.base]?.server) {
+    state.base = NO_SERVER_MAP;
+    toast('The data server is asleep, so the sky shows the SPHEREx 102-colour map instead of false colour.', 'info', 8);
+  }
+  if (!live && SKY_MAPS[state.overlay]?.server) delete state.overlay;
 
   let sky;
   try {

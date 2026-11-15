@@ -36,6 +36,7 @@ from .random_target import random_target
 from .render import percent_stretch, stretch_to_unit, to_f32, to_fits, to_png
 from .resolve import ResolverUnavailable, resolve
 from .settings import settings
+from .skytools.routes import router as skytools_router
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -55,6 +56,10 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+# Elaine's sky tools: the SPHEREx false-colour all-sky map (the default sky), per-detector
+# timelines, comparisons, spectra and catalogue overlays. Their addresses don't overlap ours.
+app.include_router(skytools_router)
 
 # Products never change once made, so browsers may keep them for a day.
 IMMUTABLE = {"Cache-Control": "public, max-age=86400"}

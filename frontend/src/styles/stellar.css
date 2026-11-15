@@ -853,3 +853,14 @@
     top: 40%;
   }
 }
+
+/* Grouped sky-map menus: keep option lists dark and readable. */
+select optgroup,
+select option {
+  background: var(--navy);
+  color: var(--soft-white);
+}
+select optgroup {
+  color: var(--muted);
+  font-style: normal;
+}

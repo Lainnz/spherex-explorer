@@ -16,7 +16,8 @@ export const STRETCHES = ['percent', 'fixed', 'auto'];
 export const SPEEDS = [0.25, 0.5, 1, 2, 4, 8];
 export const CATALOGUES = ['gaia', 'allwise'];
 export const DEFAULTS = {
-  base: 'spherex_cube',
+  // SPHEREx false colour (stars vs warm dust) opens first; see stellar/sky-view.js.
+  base: 'spherex_rgb',
   mode: 'epoch',
   op: 'none',
   cmap: 'gray',

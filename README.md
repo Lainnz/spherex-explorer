@@ -7,8 +7,9 @@ An interative web platform that uses NASA SphereX data to explore astronomical o
 star name or coordinates and the images play like a short video, so moving and
 changing objects stand out. Built for the NASA Space Apps "SPHEREx Open Data" challenge.
 
-> 🚧 Under construction. See [PLAN.md](PLAN.md) for the full build plan and
-> [docs/DATA_NOTES.md](docs/DATA_NOTES.md) for what we learned about the data.
+> 🚧 Under construction. See [PLAN.md](PLAN.md) for the full build plan,
+> [docs/DATA_NOTES.md](docs/DATA_NOTES.md) for what we learned about the data, and
+> [docs/INTEGRATION.md](docs/INTEGRATION.md) for how Elaine's and Alice's demos are combined.
 
 ## Run it on your computer (Windows 11, PowerShell)
 You need Node.js, Python 3.12 and Git (see PLAN.md, Part 1).
@@ -44,6 +45,8 @@ python scripts\build_demo_data.py
 |---|---|
 | `frontend/` | The website (Vite, plain JavaScript): title page + Stellar View |
 | `backend/` | The data server (Python, FastAPI, Astropy) |
+| `backend/app/skytools/` | Elaine's sky tools: SPHEREx false-colour map, timelines, comparisons, spectra, catalogue overlays |
+| `claude-demo/` | Elaine's original demo, kept for reference until everything is ported (Milestone 2) |
 | `config/datasets.json` | Which SPHEREx releases and sky maps to use (one file to update) |
 | `brand/` | Team logos (originals; web copies are made by `scripts/build_brand.py`) |
 | `docs/` | Notes on the data, deployment and updates |

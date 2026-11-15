@@ -1,5 +1,6 @@
 /**
- * The Layers tab (PLAN.md §8.3, parts 1 and 7): background sky map, the 102-colour
+ * The Layers tab (PLAN.md §8.3, parts 1 and 7): background sky map (SPHEREx false colour by
+ * default, from Elaine's demo), the 102-colour
  * wavelength slider for the SPHEREx cube, an overlay map with see-through slider,
  * SPHEREx coverage and image outlines, and Gaia / AllWISE catalogue markers.
  */
@@ -26,9 +27,19 @@ export function setupLayers({ root, sky, state, home, onChange }) {
     allwise: root.querySelector('#show-allwise'),
   };
 
+  const mapNote = root.querySelector('[data-map-note]');
+  // Grouped menus, so real SPHEREx maps and other telescopes' maps are never confused.
+  const groups = {};
   for (const [key, spec] of Object.entries(SKY_MAPS)) {
-    baseSelect.add(new Option(spec.label, key));
-    overlaySelect.add(new Option(spec.label, key));
+    for (const [name, select] of [['base', baseSelect], ['overlay', overlaySelect]]) {
+      const id = `${name}:${spec.group}`;
+      if (!groups[id]) {
+        groups[id] = document.createElement('optgroup');
+        groups[id].label = spec.group;
+        select.append(groups[id]);
+      }
+      groups[id].append(new Option(spec.label, key));
+    }
   }
 
   // --- Background map and wavelength ----------------------------------------------------
@@ -44,6 +55,7 @@ export function setupLayers({ root, sky, state, home, onChange }) {
     baseSelect.value = state.base;
     const isCube = Boolean(SKY_MAPS[state.base].cube);
     wavelengthRow.hidden = !isCube;
+    if (mapNote) mapNote.textContent = SKY_MAPS[state.base].note ?? '';
     await sky.setBaseMap(state.base, isCube ? plane : undefined);
   }
 
