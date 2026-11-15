@@ -105,10 +105,15 @@ $('.panel-toggle').addEventListener('click', (event) => {
 // --- Keeping the address up to date --------------------------------------------------------
 let sharing = null;
 let writeTimer = null;
+// The sky map that was asked for, when the false-colour map had to wait for the data server.
+// The address keeps the wanted map, so a reload shows colour once the server is back.
+let wantedBase = null;
+
 function writeUrl() {
   clearTimeout(writeTimer);
   writeTimer = setTimeout(() => {
-    window.history.replaceState(null, '', `?${stellarParams(state)}`);
+    const keep = wantedBase && state.base === NO_SERVER_MAP ? { ...state, base: wantedBase } : state;
+    window.history.replaceState(null, '', `?${stellarParams(keep)}`);
     sharing?.refreshOpenLink();
   }, 250);
 }
@@ -392,6 +397,23 @@ function setupCursorReadout(sky) {
   });
 }
 
+/**
+ * The false-colour sky (and live data) need our data server. Say so plainly, with the
+ * command to start it, and reload by itself once the server answers.
+ */
+function showServerBanner() {
+  const banner = $('[data-server-banner]');
+  banner.hidden = false;
+  const timer = setInterval(async () => {
+    if (await getHealth(2500)) {
+      clearInterval(timer);
+      banner.querySelector('p').textContent = 'The data server is back. Switching to the colour sky…';
+      setTimeout(() => window.location.reload(), 800);
+    }
+  }, 8000);
+  banner.querySelector('[data-close]').addEventListener('click', () => { banner.hidden = true; });
+}
+
 async function main() {
   notices.forEach((notice) => toast(notice, 'warning', 9));
 
@@ -418,8 +440,9 @@ async function main() {
   // The false-colour map is made by our data server; without it, show SPHEREx's own
   // 102-colour map (still real SPHEREx data, served straight from NASA IRSA).
   if (!live && SKY_MAPS[state.base]?.server) {
+    wantedBase = state.base;
     state.base = NO_SERVER_MAP;
-    toast('The data server is asleep, so the sky shows the SPHEREx 102-colour map instead of false colour.', 'info', 8);
+    showServerBanner();
   }
   if (!live && SKY_MAPS[state.overlay]?.server) delete state.overlay;
 

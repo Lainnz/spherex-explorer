@@ -56,6 +56,15 @@
         <div class="sky-inner" id="aladin"></div>
       </div>
       <p class="sky-message" data-sky-message hidden></p>
+      <aside class="panel server-banner" data-server-banner role="status" hidden>
+        <p>
+          <strong>Demo mode:</strong> the data server isn't answering, so the sky shows SPHEREx's grey 102-colour map
+          instead of the false-colour map. Start it in <code>D:\Projects\spherex-explorer\backend</code> with
+          <code>uvicorn app.main:app --reload --port 8000</code> (close any older SPHEREx server on port 8000 first).
+          This page switches to colour by itself when it answers.
+        </p>
+        <button type="button" class="small-button" data-close aria-label="Hide this message">Hide</button>
+      </aside>
       <div class="sky-loading" data-sky-loading role="status" aria-live="polite">Loading the sky…</div>
 
       <!-- Embed mode only -->
