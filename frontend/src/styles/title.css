@@ -1,0 +1,330 @@
+/* Title page (PLAN.md §8.2): logo top-centre, big search in the middle, Earth's horizon
+   across the bottom (drawn by the 3D scene on the full-screen canvas). */
+
+/* Instant starry background (no JavaScript needed) while three.js loads. */
+.sky-fallback {
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  background:
+    radial-gradient(1px 1px at 12% 18%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 33% 72%, #cfe0ff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 58% 26%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 76% 58%, #ffe9c9 50%, transparent 51%),
+    radial-gradient(1px 1px at 88% 14%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 22% 44%, #fff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 67% 84%, #cfe0ff 50%, transparent 51%),
+    radial-gradient(1px 1px at 45% 8%, #fff 50%, transparent 51%),
+    radial-gradient(ellipse 140% 60% at 50% 115%, #0b2a5a 0%, #050a18 60%);
+  background-color: var(--night-sky);
+}
+
+.scene {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+.scene.is-ready {
+  opacity: 1;
+}
+
+/* Darkens the screen at the end of the fly-away. */
+.veil {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: var(--night-sky);
+  opacity: 0;
+  pointer-events: none;
+}
+.veil-message {
+  font-family: var(--font-display);
+  letter-spacing: 0.1em;
+  color: var(--soft-white);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.hero {
+  min-height: 100vh;
+  min-height: 100svh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  padding: clamp(1rem, 4vh, 2.5rem) 1rem 1rem;
+  text-align: center;
+}
+
+.hero-logo {
+  margin: 0;
+  width: clamp(280px, 46vw, 820px);
+}
+.hero-logo img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.tagline {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(0.9rem, 1.6vw, 1.15rem);
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 12px rgb(0 0 0 / 0.8);
+}
+
+/* Centred in the space between the logo and the Earth's horizon. */
+.hero-search {
+  align-self: start;
+  margin-top: clamp(1.5rem, 9vh, 6rem);
+  width: min(100%, 900px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.search {
+  display: flex;
+  gap: 0.6rem;
+  width: 100%;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.search-input {
+  flex: 1 1 26rem;
+  max-width: 640px;
+  height: 64px;
+  padding: 0 1.25rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--panel-border);
+  border-bottom: 2px solid var(--teal);
+  background: rgb(1 25 57 / 0.8);
+  backdrop-filter: blur(8px);
+  color: var(--white);
+  font: 500 1.05rem var(--font-ui);
+}
+.search-input::placeholder {
+  color: var(--muted);
+}
+.search-input:focus-visible {
+  box-shadow: var(--focus-glow);
+}
+
+.search .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 64px;
+  padding: 0 1.5rem;
+  border: none;
+  font: 600 1.05rem var(--font-ui);
+  cursor: pointer;
+}
+.search .btn svg {
+  width: 26px;
+  height: 26px;
+}
+.btn-secondary {
+  background: rgb(1 25 57 / 0.85);
+  border: 1px solid var(--teal) !important;
+}
+.btn-secondary:hover {
+  background: rgb(0 151 157 / 0.25);
+}
+.search .btn[disabled] {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.search-message {
+  min-height: 1.5em;
+  margin: 0;
+  font-size: 0.95rem;
+  text-shadow: 0 0 8px rgb(0 0 0 / 0.9);
+}
+.search-message[data-kind='error'] {
+  color: #ff8f88; /* readable on the dark sky (WCAG AA) */
+}
+.search-message button {
+  font: inherit;
+  color: var(--teal-hover);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.chip {
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: rgb(1 25 57 / 0.7);
+  color: var(--soft-white);
+  font: 500 0.9rem var(--font-ui);
+  cursor: pointer;
+}
+.chip:hover {
+  border-color: var(--teal);
+  color: var(--white);
+}
+
+.advanced {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.advanced summary {
+  cursor: pointer;
+}
+.advanced-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  justify-content: center;
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  background: rgb(1 25 57 / 0.8);
+  text-align: left;
+}
+.advanced-grid label,
+.advanced-grid legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--soft-white);
+}
+.advanced-grid input,
+.advanced-grid select {
+  font: 0.9rem var(--font-mono);
+  color: var(--white);
+  background: var(--night-sky);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 0.3rem 0.4rem;
+}
+.fov-row {
+  display: flex;
+  gap: 0.4rem;
+}
+.fov-row input {
+  width: 6rem;
+}
+.detectors {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+.detectors label {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.2rem;
+  margin-right: 0.6rem;
+}
+
+.hero-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 0.5rem;
+}
+.link-button {
+  background: none;
+  border: none;
+  color: var(--soft-white);
+  font: 500 0.95rem var(--font-ui);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.link-button:hover {
+  color: var(--white);
+}
+
+.coming-soon {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  padding: 3rem 1rem 1rem;
+  background: linear-gradient(transparent, rgb(5 10 24 / 0.9) 30%);
+}
+.card {
+  width: min(100%, 22rem);
+  opacity: 0.85;
+}
+.card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+.card p {
+  margin: 0;
+}
+
+.page-title .site-footer {
+  background: rgb(5 10 24 / 0.92);
+}
+
+.dialog {
+  max-width: 34rem;
+  color: var(--soft-white);
+}
+.dialog::backdrop {
+  background: rgb(5 10 24 / 0.7);
+}
+.dialog .btn {
+  border: none;
+  cursor: pointer;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Temporary performance readout (development, or ?fps=1). */
+.fps {
+  position: fixed;
+  right: 0.5rem;
+  top: 0.5rem;
+  z-index: 60;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  background: rgb(0 0 0 / 0.6);
+  color: #9cffa8;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 640px) {
+  .search .btn {
+    flex: 1 1 40%;
+    justify-content: center;
+  }
+  .search-input {
+    height: 56px;
+  }
+}

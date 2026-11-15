@@ -1,0 +1,75 @@
+{
+  "_note": "Draft from Phase 0 live checks (2026-11-14). See docs/DATA_NOTES.md.",
+  "default_releases": ["dr1", "qr3"],
+  "releases": {
+    "dr1": {
+      "label": "SPHEREx Data Release 1",
+      "doi": "10.26131/IRSA678",
+      "sia_collections": { "wide": "spherex_dr1", "deep": "spherex_dr1_deep" },
+      "priority": 1,
+      "status": "active",
+      "_search_cache_note": "DR1 is a finished release that won't change, so searches are remembered for 30 days.",
+      "search_cache_hours": 720
+    },
+    "qr3": {
+      "label": "SPHEREx Quick Release 3 (weekly)",
+      "doi": "10.26131/IRSA662",
+      "sia_collections": { "wide": "spherex_qr3", "deep": "spherex_qr3_deep" },
+      "priority": 2,
+      "status": "active",
+      "_search_cache_note": "QR3 gains new images every week, so searches are re-checked after 6 hours.",
+      "search_cache_hours": 6
+    }
+  },
+  "allsky_cube": {
+    "label": "SPHEREx DR1 all-sky cube (102 bands)",
+    "doi": "10.26131/IRSA679",
+    "hips_url": "https://irsa.ipac.caltech.edu/data/hips/SPHEREx/spherex_allsky_cube",
+    "creator_did": "ivo://IPAC/P/SPHEREx/DR1/cube",
+    "depth": 102,
+    "hips_order": 5,
+    "tile_format": "png",
+    "blank_planes": [50, 51],
+    "wavelengths_um": [0.753, 0.771, 0.790, 0.809, 0.828, 0.848, 0.868, 0.889, 0.910, 0.932, 0.955, 0.978, 1.001, 1.025, 1.050, 1.075, 1.102, 1.113, 1.139, 1.167, 1.195, 1.224, 1.254, 1.284, 1.315, 1.346, 1.378, 1.412, 1.446, 1.481, 1.517, 1.554, 1.592, 1.631, 1.656, 1.695, 1.735, 1.775, 1.818, 1.861, 1.905, 1.949, 1.995, 2.041, 2.089, 2.139, 2.189, 2.240, 2.292, 2.345, 2.399, 2.445, 2.506, 2.575, 2.646, 2.719, 2.794, 2.871, 2.951, 3.033, 3.118, 3.204, 3.293, 3.383, 3.476, 3.570, 3.667, 3.768, 3.833, 3.867, 3.901, 3.935, 3.970, 4.005, 4.040, 4.076, 4.112, 4.148, 4.184, 4.220, 4.257, 4.294, 4.331, 4.368, 4.405, 4.435, 4.467, 4.500, 4.533, 4.566, 4.600, 4.635, 4.669, 4.704, 4.739, 4.773, 4.808, 4.843, 4.879, 4.915, 4.951, 4.988]
+  },
+  "pixel_scale_arcsec": 6.15,
+  "detectors": [
+    { "id": "D1", "bandpass": "SPHEREx-D1", "em_min_um": 0.7455, "em_max_um": 1.1167, "color": "#0072B2" },
+    { "id": "D2", "bandpass": "SPHEREx-D2", "em_min_um": 1.1033, "em_max_um": 1.6499, "color": "#56B4E9" },
+    { "id": "D3", "bandpass": "SPHEREx-D3", "em_min_um": 1.6301, "em_max_um": 2.4346, "color": "#009E73" },
+    { "id": "D4", "bandpass": "SPHEREx-D4", "em_min_um": 2.4027, "em_max_um": 3.8473, "color": "#F0E442" },
+    { "id": "D5", "bandpass": "SPHEREx-D5", "em_min_um": 3.8113, "em_max_um": 4.4300, "color": "#E69F00" },
+    { "id": "D6", "bandpass": "SPHEREx-D6", "em_min_um": 4.4115, "em_max_um": 5.0096, "color": "#D55E00" }
+  ],
+  "hips": {
+    "spherex_color_qr2": "CDS/P/SPHEREx/QR2/color",
+    "spherex_D1_qr2": "CDS/P/SPHEREx/QR2/D1",
+    "spherex_D2_qr2": "CDS/P/SPHEREx/QR2/D2",
+    "spherex_D3_qr2": "CDS/P/SPHEREx/QR2/D3",
+    "spherex_D4_qr2": "CDS/P/SPHEREx/QR2/D4",
+    "spherex_D5_qr2": "CDS/P/SPHEREx/QR2/D5",
+    "spherex_D6_qr2": "CDS/P/SPHEREx/QR2/D6",
+    "wise_color": "CDS/P/allWISE/color",
+    "unwise": "CDS/P/unWISE/color-W2-W1W2-W1",
+    "twomass": "CDS/P/2MASS/color"
+  },
+  "catalogs": { "gaia_dr3": "I/355/gaiadr3", "allwise": "II/328/allwise" },
+  "aladin_lite_version": "3.8.2",
+  "limits": {
+    "min_fov_arcsec": 30,
+    "max_fov_arcsec": 3600,
+    "default_fov_arcsec": 600,
+    "max_images_default": 80,
+    "epoch_gap_days": 20,
+    "deep_field_window_days": 14,
+    "cutout_size_margin": 1.15,
+    "cutout_mb_estimate": 4.1,
+    "irsa_timeout_s": 300
+  },
+  "_flags_note": "Flags that set CONTAINS_BAD_PIXEL (SPHEREx Explanatory Supplement Table 16), as listed in IRSA's spherex_source_discovery_tool_demo tutorial. Names missing from an image's FLAGS header are ignored.",
+  "flags_default_exclude": [
+    "TRANSIENT", "OVERFLOW", "SUR_ERROR", "NONFUNC", "DICHROIC", "MISSING_DATA", "HOT", "COLD",
+    "NONLINEAR", "CROSSTALK", "GHOST", "GHOST_FPA", "GHOST_EXT", "STREAK", "PERSIST",
+    "BLOOM", "SNOWBALL", "HALO", "SATELLITE_HALO"
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "format_version": 1,
+  "built": "2026-11-14",
+  "note": "Saved SPHEREx data for the featured targets, used when the live data server is unavailable.",
+  "targets": [
+    {
+      "slug": "barnards-star",
+      "name": "Barnard's Star",
+      "frames": 12,
+      "size_mb": 0.44
+    },
+    {
+      "slug": "eps-indi-b",
+      "name": "Epsilon Indi B",
+      "frames": 15,
+      "size_mb": 0.52
+    },
+    {
+      "slug": "wise-0855",
+      "name": "WISE 0855",
+      "frames": 8,
+      "size_mb": 0.24
+    },
+    {
+      "slug": "rw-aurigae",
+      "name": "RW Aurigae",
+      "frames": 9,
+      "size_mb": 0.9
+    },
+    {
+      "slug": "r-draconis",
+      "name": "R Draconis",
+      "frames": 21,
+      "size_mb": 1.9
+    }
+  ]
+}

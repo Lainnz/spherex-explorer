@@ -1,0 +1,257 @@
+{
+  "_note": "Made by scripts/resolve_targets.py on 2026-11-14 from SIMBAD. ra/dec = where to look; motion = catalogue position (ICRS, epoch J2000) and proper motion.",
+  "targets": [
+    {
+      "slug": "barnards-star",
+      "name": "Barnard's Star",
+      "aliases": [
+        "Barnard",
+        "Barnards",
+        "GJ 699",
+        "V2500 Oph"
+      ],
+      "simbad_id": "NAME Barnard's star",
+      "ra": 269.452077,
+      "dec": 4.693365,
+      "motion": {
+        "ra": 269.4520769586187,
+        "dec": 4.693364966576667,
+        "epoch": 2000.0,
+        "pmra": -801.551,
+        "pmdec": 10362.394,
+        "parallax": 546.9759,
+        "parallax_err": 0.04010000079870224,
+        "rv": -110.11
+      },
+      "distance_ly": 5.96,
+      "otype": "BY*",
+      "sp_type": "M4V",
+      "description": "A small red dwarf about 6 light-years away that crosses the sky faster than any other star: the width of the full Moon in about 175 years.",
+      "demo": {
+        "fov_arcsec": 300,
+        "stretch": "percent",
+        "trim": 99.5
+      }
+    },
+    {
+      "slug": "eps-indi-b",
+      "name": "Epsilon Indi B",
+      "aliases": [
+        "eps Ind B",
+        "Epsilon Indi Ba",
+        "Epsilon Indi Bb",
+        "eps Ind Ba",
+        "eps Ind Bb"
+      ],
+      "simbad_id": "* eps Ind B",
+      "ra": 331.0441466,
+      "dec": -56.7828442,
+      "motion": {
+        "ra": 331.04414658852124,
+        "dec": -56.782844195116105,
+        "epoch": 2000.0,
+        "pmra": 3981.977,
+        "pmdec": -2466.832,
+        "parallax": 270.658,
+        "parallax_err": 0.6895999908447266,
+        "rv": null
+      },
+      "distance_ly": 12.05,
+      "otype": "BD*",
+      "sp_type": "T1V+T6V",
+      "description": "A pair of brown dwarfs (objects too small to shine like stars) orbiting each other and the star Epsilon Indi, about 12 light-years away.",
+      "demo": {
+        "fov_arcsec": 300,
+        "stretch": "percent",
+        "trim": 99.5
+      }
+    },
+    {
+      "slug": "wise-0855",
+      "name": "WISE 0855",
+      "aliases": [
+        "WISE 0855-0714",
+        "WISE J085510.83-071442.5",
+        "WISEA J085510.74-071442.5"
+      ],
+      "simbad_id": "WISEA J085510.74-071442.5",
+      "ra": 133.7951292,
+      "dec": -7.2451472,
+      "motion": {
+        "ra": 133.81890825,
+        "dec": -7.247048000000001,
+        "epoch": 2000.0,
+        "pmra": -8123.7,
+        "pmdec": 673.2,
+        "parallax": 439.0,
+        "parallax_err": 2.4000000953674316,
+        "rv": null
+      },
+      "distance_ly": 7.43,
+      "otype": "BD*",
+      "sp_type": "Y2",
+      "description": "The coldest brown dwarf known, about 7.4 light-years away, and one of the fastest-moving objects in the sky.",
+      "demo": {
+        "fov_arcsec": 180,
+        "stretch": "percent",
+        "trim": 99.5
+      }
+    },
+    {
+      "slug": "rw-aurigae",
+      "name": "RW Aurigae",
+      "aliases": [
+        "RW Aur"
+      ],
+      "simbad_id": "V* RW Aur",
+      "ra": 76.956526,
+      "dec": 30.4014382,
+      "motion": {
+        "ra": 76.95652603458333,
+        "dec": 30.401438173888888,
+        "epoch": 2000.0,
+        "pmra": 7.23,
+        "pmdec": -20.33,
+        "parallax": 15.42,
+        "parallax_err": 3.690000057220459,
+        "rv": 15.0
+      },
+      "distance_ly": 211.51,
+      "otype": "TT*",
+      "sp_type": "K1/5e+K5e",
+      "description": "A young star still wrapped in the disk of gas and dust it formed from; its brightness dips and flickers unpredictably.",
+      "demo": {
+        "fov_arcsec": 600,
+        "stretch": "percent",
+        "trim": 99.5
+      }
+    },
+    {
+      "slug": "r-draconis",
+      "name": "R Draconis",
+      "aliases": [
+        "R Dra"
+      ],
+      "simbad_id": "V* R Dra",
+      "ra": 248.1676108,
+      "dec": 66.7549794,
+      "motion": {
+        "ra": 248.16761083295,
+        "dec": 66.75497941722,
+        "epoch": 2000.0,
+        "pmra": -20.643,
+        "pmdec": 6.149,
+        "parallax": 1.2509,
+        "parallax_err": 0.06480000168085098,
+        "rv": -132.8
+      },
+      "distance_ly": 2607.37,
+      "otype": "Mi*",
+      "sp_type": "M4.5-6+e",
+      "description": "A red giant that slowly swells and shrinks, brightening and fading over about 8 months. It sits in a SPHEREx Deep Field, so it has many images.",
+      "demo": {
+        "fov_arcsec": 600,
+        "stretch": "percent",
+        "trim": 99.5
+      }
+    }
+  ],
+  "interesting": [
+    {
+      "name": "Orion Nebula",
+      "simbad_id": "M  42",
+      "ra": 83.8201,
+      "dec": -5.3876,
+      "otype": "HII",
+      "fov_arcsec": 1800
+    },
+    {
+      "name": "Pleiades",
+      "simbad_id": "Cl Melotte   22",
+      "ra": 56.600833,
+      "dec": 24.113889,
+      "otype": "OpC",
+      "fov_arcsec": 3600
+    },
+    {
+      "name": "Andromeda Galaxy",
+      "simbad_id": "M  31",
+      "ra": 10.684708,
+      "dec": 41.26875,
+      "otype": "AGN",
+      "fov_arcsec": 3600
+    },
+    {
+      "name": "Crab Nebula",
+      "simbad_id": "M   1",
+      "ra": 83.6324,
+      "dec": 22.0174,
+      "otype": "SNR",
+      "fov_arcsec": 600
+    },
+    {
+      "name": "Eagle Nebula",
+      "simbad_id": "M  16",
+      "ra": 274.688,
+      "dec": -13.792,
+      "otype": "OpC",
+      "fov_arcsec": 1800
+    },
+    {
+      "name": "Lagoon Nebula",
+      "simbad_id": "M   8",
+      "ra": 270.904167,
+      "dec": -24.386667,
+      "otype": "OpC",
+      "fov_arcsec": 2400
+    },
+    {
+      "name": "Carina Nebula",
+      "simbad_id": "NGC  3372",
+      "ra": 161.259292,
+      "dec": -59.699944,
+      "otype": "HII",
+      "fov_arcsec": 3600
+    },
+    {
+      "name": "Whirlpool Galaxy",
+      "simbad_id": "M  51",
+      "ra": 202.469575,
+      "dec": 47.195258,
+      "otype": "Sy2",
+      "fov_arcsec": 900
+    },
+    {
+      "name": "Tarantula Nebula",
+      "simbad_id": "NGC  2070",
+      "ra": 84.675,
+      "dec": -69.1,
+      "otype": "Cl*",
+      "fov_arcsec": 1800
+    },
+    {
+      "name": "Centre of the Milky Way",
+      "simbad_id": "NAME Sgr A*",
+      "ra": 266.416817,
+      "dec": -29.007825,
+      "otype": "X",
+      "fov_arcsec": 1200
+    },
+    {
+      "name": "Horsehead Nebula",
+      "simbad_id": "IC  434",
+      "ra": 85.25,
+      "dec": -2.5,
+      "otype": "HII",
+      "fov_arcsec": 1800
+    },
+    {
+      "name": "Helix Nebula",
+      "simbad_id": "NGC  7293",
+      "ra": 337.410606,
+      "dec": -20.837152,
+      "otype": "PN",
+      "fov_arcsec": 1200
+    }
+  ]
+}

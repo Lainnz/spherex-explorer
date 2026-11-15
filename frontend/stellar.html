@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stellar View · SPHEREx Xplorer</title>
+    <meta name="description" content="Stellarium-style sky view of NASA SPHEREx infrared images with a time slider." />
+    <meta name="theme-color" content="#050A18" />
+    <link rel="icon" href="/brand/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" href="/brand/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
+    <script type="module" src="/src/stellar/main.js"></script>
+  </head>
+  <body class="page-stellar">
+    <header class="site-header">
+      <a href="./" class="header-logo" aria-label="SPHEREx Xplorer home">
+        <picture>
+          <source srcset="/brand/logo-horizontal-white.webp" type="image/webp" />
+          <img src="/brand/logo-horizontal-white.png" alt="SPHEREx Xplorer" width="1600" height="534" />
+        </picture>
+      </a>
+      <form id="header-search" class="header-search" role="search" autocomplete="off">
+        <label for="header-search-input" class="visually-hidden">Search a star or coordinates</label>
+        <input id="header-search-input" type="search" placeholder="Search a star or coordinates" spellcheck="false" />
+        <button type="submit" class="icon-button" data-icon="binoculars" aria-label="Explore"></button>
+        <button type="button" class="icon-button" data-icon="shuffle" id="header-random" aria-label="Randomize"></button>
+      </form>
+      <div class="header-actions" data-lists>
+        <details class="list-menu" data-list="favourites">
+          <summary title="Favourites (saved on this device)">★ <span data-count>0</span></summary>
+          <div class="panel list-dropdown">
+            <h3>Favourites</h3>
+            <ul></ul>
+            <p class="note small">Saved on this device; accounts coming soon.</p>
+          </div>
+        </details>
+        <details class="list-menu" data-list="selected">
+          <summary title="Selected objects (for the coming 3D Time Machine)">✓ <span data-count>0</span></summary>
+          <div class="panel list-dropdown">
+            <h3>Selected</h3>
+            <ul></ul>
+            <p class="note small">Saved on this device; the 3D Time Machine (coming soon) will use this list.</p>
+          </div>
+        </details>
+        <span class="badge" data-release title="SPHEREx data releases in use"></span>
+        <span class="badge" data-mode>…</span>
+        <button type="button" class="header-button" data-icon="link" id="copy-link">Copy link</button>
+        <button type="button" class="header-button" data-icon="code" id="embed-button">Embed</button>
+      </div>
+    </header>
+
+    <main class="stellar">
+      <!-- Aladin restyles the element it's given (position: relative), so it gets an inner
+           box that fills this one. -->
+      <div class="sky" id="sky" aria-label="Sky view. Drag to rotate around the centre; use the toolbar to move and zoom.">
+        <div class="sky-inner" id="aladin"></div>
+      </div>
+      <p class="sky-message" data-sky-message hidden></p>
+      <div class="sky-loading" data-sky-loading role="status" aria-live="polite">Loading the sky…</div>
+
+      <!-- Embed mode only -->
+      <div class="embed-label" data-embed-label></div>
+      <a class="embed-open" data-open-full target="_blank" rel="noopener">Open in SPHEREx Xplorer ↗</a>
+
+      <aside class="panel control-panel" aria-label="Controls">
+        <button type="button" class="panel-toggle" aria-expanded="true" aria-controls="control-body">Controls</button>
+        <div id="control-body" class="panel-body">
+          <h2 class="target-name" data-target-name>Loading…</h2>
+          <dl class="coordinate mono">
+            <dt>RA</dt><dd data-ra>–</dd>
+            <dt>Dec</dt><dd data-dec>–</dd>
+          </dl>
+          <p class="sexagesimal mono" data-sexagesimal></p>
+
+          <label class="field">
+            <span>Field of view <button type="button" class="help" data-help="How wide a patch of sky you see. Bigger shows more and lets you follow faster movers, but downloads more data.">?</button></span>
+            <span class="fov-row">
+              <input id="fov-input" type="number" min="0.001" step="any" inputmode="decimal" />
+              <select id="fov-unit" aria-label="Field of view unit">
+                <option value="s">″ arcsec</option>
+                <option value="m">′ arcmin</option>
+                <option value="d">° degrees</option>
+              </select>
+            </span>
+            <small class="note" data-fov-note></small>
+          </label>
+
+          <p class="data-status" data-observations role="status" aria-live="polite"></p>
+
+          <h3 class="panel-heading">Display</h3>
+          <div class="field-grid">
+            <label class="field">
+              <span>Band <button type="button" class="help" data-help="Which of SPHEREx's six detectors to play. Each sees a different range of infrared colours, from D1 (0.75 µm) to D6 (5 µm).">?</button></span>
+              <select id="band">
+                <option value="all">All detectors</option>
+                <option value="1">D1 · 0.75–1.1 µm</option>
+                <option value="2">D2 · 1.1–1.6 µm</option>
+                <option value="3">D3 · 1.6–2.4 µm</option>
+                <option value="4">D4 · 2.4–3.8 µm</option>
+                <option value="5">D5 · 3.8–4.4 µm</option>
+                <option value="6">D6 · 4.4–5.0 µm</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Colour map <button type="button" class="help" data-help="How brightness becomes colour. Gray is closest to the raw image; the others make faint differences easier to see. Cividis is friendly to colour-blind eyes.">?</button></span>
+              <select id="cmap">
+                <option value="gray">Gray</option>
+                <option value="inferno">Inferno</option>
+                <option value="viridis">Viridis</option>
+                <option value="cividis">Cividis</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Stretch <button type="button" class="help" data-help="Percent: all frames share one brightness scale, so blinking is fair. Auto: each frame scaled on its own (shows faint detail, but don't compare brightness). Fixed: type your own range.">?</button></span>
+              <select id="stretch">
+                <option value="percent">Percent (shared)</option>
+                <option value="auto">Auto (per frame)</option>
+                <option value="fixed">Fixed</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Frame mode <button type="button" class="help" data-help="Per visit: images from each visit added together per detector (cleaner). All detectors: every detector merged per visit (deepest). Every image: each exposure on its own (noisier, best for very fast movers).">?</button></span>
+              <select id="frame-mode">
+                <option value="epoch">Per visit</option>
+                <option value="white">All detectors merged</option>
+                <option value="exposure">Every image</option>
+              </select>
+            </label>
+          </div>
+          <div class="fov-row" data-fixed-row hidden>
+            <input id="fixed-min" type="number" step="any" aria-label="Darkest value (MJy/sr)" placeholder="min" />
+            <input id="fixed-max" type="number" step="any" aria-label="Brightest value (MJy/sr)" placeholder="max" />
+          </div>
+          <label class="field">
+            <span>Trim Bright <output data-trim-value></output> <button type="button" class="help" data-help="Ignores the very brightest (and darkest) pixels when choosing the brightness scale, so one bright star doesn't make everything else look black.">?</button></span>
+            <input id="trim" type="range" min="90" max="100" step="0.1" />
+          </label>
+          <label class="field">
+            <span>Linear <output data-linear-value></output> <button type="button" class="help" data-help="Low values lift faint things so you can see them; high values show brightness more literally.">?</button></span>
+            <input id="linear" type="range" min="-2" max="1" step="0.05" />
+          </label>
+          <div class="toggles">
+            <label><input type="checkbox" id="show-frames" checked /> Show SPHEREx frames on the sky</label>
+            <input id="frame-opacity" type="range" min="0" max="1" step="0.05" value="0.85" aria-label="Frame see-through" />
+          </div>
+          <div class="button-row">
+            <button type="button" class="small-button" id="player-toggle" aria-pressed="false">Frame player</button>
+            <button type="button" class="small-button" data-reload>Reload images</button>
+          </div>
+
+          <h3 class="panel-heading">Operations <button type="button" class="help" data-help="Combine frames to discover things. Stack adds visits together (median = a still sky where movers vanish). Difference subtracts two visits: anything that moved shows as a black/white pair.">?</button></h3>
+          <div class="segmented" role="group" aria-label="Operation">
+            <button type="button" data-op="none">None</button>
+            <button type="button" data-op="stack">Stack</button>
+            <button type="button" data-op="diff">Difference</button>
+            <button type="button" data-op="composite">Colour</button>
+          </div>
+          <div data-op-section="stack" class="op-section" hidden>
+            <label class="field"><span>Method</span>
+              <select id="stack-method">
+                <option value="median">Median (still sky)</option>
+                <option value="mean">Mean</option>
+                <option value="sum">Sum</option>
+              </select>
+            </label>
+            <button type="button" class="small-button" data-run="stack">Make stack</button>
+          </div>
+          <div data-op-section="diff" class="op-section" hidden>
+            <label class="field"><span>A (newer)</span><select id="visit-a"></select></label>
+            <label class="field"><span>minus B (older)</span><select id="visit-b"></select></label>
+            <label class="toggles"><input type="checkbox" id="normalize" checked /> Match brightness first</label>
+            <button type="button" class="small-button" data-run="diff">Subtract</button>
+          </div>
+          <div data-op-section="composite" class="op-section" hidden>
+            <div class="field-grid">
+              <label class="field"><span>Red</span><select id="red"><option>1</option><option>2</option><option>3</option><option>4</option><option selected>5</option><option>6</option></select></label>
+              <label class="field"><span>Green</span><select id="green"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select></label>
+              <label class="field"><span>Blue</span><select id="blue"><option selected>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
+            </div>
+            <label class="field"><span>Visit</span><select id="colour-visit"></select></label>
+            <button type="button" class="small-button" data-run="composite">Make colour picture</button>
+          </div>
+          <button type="button" class="btn find-movers" data-find-movers>Find moving objects</button>
+
+          <details class="about">
+            <summary>About this view</summary>
+            <p>
+              You're looking out from the centre of the Earth with north (the celestial pole) up, like
+              Stellarium without the ground. The background is the SPHEREx all-sky map; outlines show
+              individual SPHEREx images of this spot.
+            </p>
+            <p>Sky viewer: Aladin Lite (CDS, Strasbourg). Data: NASA SPHEREx via IRSA, ESA Gaia, NASA WISE, 2MASS.</p>
+          </details>
+        </div>
+      </aside>
+
+      <div class="toolbar" role="toolbar" aria-label="Navigation" data-toolbar></div>
+      <div class="moved-chip" data-moved-chip hidden>
+        <span data-moved></span>
+        <button type="button">Go back</button>
+      </div>
+
+      <aside class="panel drawer" aria-label="Details">
+        <div class="tabs" role="tablist">
+          <button role="tab" aria-selected="true" aria-controls="tab-layers" id="tab-layers-button">Layers</button>
+          <button role="tab" aria-selected="false" aria-controls="tab-info" id="tab-info-button">Info</button>
+          <button role="tab" aria-selected="false" aria-controls="tab-flags" id="tab-flags-button">Flags</button>
+          <button role="tab" aria-selected="false" aria-controls="tab-spectrum" id="tab-spectrum-button">Spectrum</button>
+          <button role="tab" aria-selected="false" aria-controls="tab-curve" id="tab-curve-button">Light curve</button>
+        </div>
+
+        <section id="tab-info" role="tabpanel" aria-labelledby="tab-info-button" class="tab-body" hidden>
+          <h3 class="panel-heading">This frame <button type="button" class="help" data-help="A frame is what you see at one moment of the time slider: one or more SPHEREx images added together.">?</button></h3>
+          <dl class="info-list" data-frame-info></dl>
+          <h3 class="panel-heading">The SPHEREx image <button type="button" class="help" data-help="Details of the first original SPHEREx image used in this frame, straight from NASA's files.">?</button></h3>
+          <div data-image-info></div>
+        </section>
+
+        <section id="tab-flags" role="tabpanel" aria-labelledby="tab-flags-button" class="tab-body" hidden>
+          <p>
+            Quality: <span class="quality-badge" data-quality></span>
+            <button type="button" class="help" data-help="Good: under 5% of the pixels in view have a problem flag. Use with care: under 20%, or a problem right on the target. Poor: 20% or more.">?</button>
+          </p>
+          <p class="note small">
+            SPHEREx marks every pixel that might be unreliable. Tick <strong>Show</strong> to colour those pixels on the sky;
+            untick <strong>Leave out</strong> to keep them in the frames.
+          </p>
+          <div class="flags-table">
+            <table>
+              <thead><tr><th>Show</th><th>Flag</th><th>Pixels</th><th title="On the target">Target</th><th>Leave out</th></tr></thead>
+              <tbody data-flags></tbody>
+            </table>
+          </div>
+          <button type="button" class="small-button" data-apply-exclusions>Remake frames with these choices</button>
+        </section>
+
+        <section id="tab-spectrum" role="tabpanel" aria-labelledby="tab-spectrum-button" class="tab-body" hidden>
+          <p><strong data-subject></strong> <button type="button" class="help" data-help="A spectrum shows how bright something is at each infrared colour. SPHEREx's wavelength changes across each image, so each new image measures a slightly different colour.">?</button></p>
+          <p class="note small" data-photometry-status></p>
+          <p class="warning-note" data-warning hidden></p>
+          <div class="chart-box"><canvas aria-label="Spectrum chart"></canvas></div>
+          <p class="note small" data-spectrum-summary></p>
+          <div class="toggles">
+            <label><input type="checkbox" id="bin-channels" /> Combine into SPHEREx's 102 channels</label>
+            <label><input type="checkbox" id="show-flagged" /> Show flagged points (hollow)</label>
+            <label class="inline-select">Colour by
+              <select id="colour-by"><option value="detector">detector</option><option value="visit">visit</option></select>
+            </label>
+          </div>
+          <button type="button" class="small-button" data-csv>Download CSV</button>
+          <p class="note small" data-method></p>
+        </section>
+
+        <section id="tab-curve" role="tabpanel" aria-labelledby="tab-curve-button" class="tab-body" hidden>
+          <p><strong data-subject></strong> <button type="button" class="help" data-help="A light curve shows brightness over time. To compare like with like, choose a narrow range of wavelengths.">?</button></p>
+          <p class="note small" data-photometry-status></p>
+          <div class="chart-box"><canvas aria-label="Light curve chart"></canvas></div>
+          <div class="fov-row window-row">
+            <label>From <input id="window-min" type="number" step="0.01" min="0.7" max="5.1" placeholder="0.75" /> µm</label>
+            <label>to <input id="window-max" type="number" step="0.01" min="0.7" max="5.1" placeholder="5.00" /> µm</label>
+          </div>
+          <label class="toggles"><input type="checkbox" id="curve-relative" /> Relative brightness from the star's outer glow
+            <button type="button" class="help" data-help="For stars too bright for SPHEREx (their centre overflows), this measures the glow around them instead. It shows how the brightness changes (2 = twice as bright as usual), not the exact brightness.">?</button></label>
+          <button type="button" class="small-button" data-csv>Download CSV</button>
+        </section>
+        <section id="tab-layers" role="tabpanel" aria-labelledby="tab-layers-button" class="tab-body">
+          <label class="field">
+            <span>Sky map <button type="button" class="help" data-help="The picture of the whole sky behind everything. The SPHEREx map comes in 102 infrared colours.">?</button></span>
+            <select id="base-map"></select>
+          </label>
+          <label class="field" data-wavelength-row>
+            <span>Wavelength <button type="button" class="help" data-help="Which of SPHEREx's 102 infrared colours to show. Longer wavelengths see cooler things and through more dust.">?</button></span>
+            <input id="wavelength" type="range" min="0" max="101" step="1" />
+            <small class="mono" data-wavelength></small>
+          </label>
+          <label class="field">
+            <span>Overlay <button type="button" class="help" data-help="A second sky map on top of the first. Use the slider to see through it.">?</button></span>
+            <select id="overlay-map"><option value="">None</option></select>
+            <input id="overlay-opacity" type="range" min="0" max="1" step="0.05" aria-label="Overlay see-through" />
+          </label>
+          <fieldset class="field toggles">
+            <legend>Show</legend>
+            <label><input type="checkbox" id="show-footprints" checked /> SPHEREx image outlines</label>
+            <label><input type="checkbox" id="show-coverage" /> SPHEREx coverage (DR1)</label>
+            <label><input type="checkbox" id="show-gaia" /> Gaia DR3 stars</label>
+            <label><input type="checkbox" id="show-allwise" /> AllWISE sources</label>
+          </fieldset>
+          <p class="note">
+            <strong>SPHEREx</strong> (NASA) maps the sky in 102 infrared colours. <strong>Gaia</strong> (ESA)
+            measures star positions, distances and motions. <strong>WISE</strong> (NASA) mapped the infrared
+            sky from 2010. <strong>2MASS</strong> is a near-infrared sky survey.
+          </p>
+        </section>
+      </aside>
+
+      <section class="panel frame-player" data-frame-player hidden aria-label="Frame player">
+        <header class="frame-player-head">
+          <span data-player-label></span>
+          <button type="button" class="small-button" data-close aria-label="Close the frame player">Close</button>
+        </header>
+        <div class="frame-player-view"><canvas></canvas></div>
+        <label class="field">
+          <span>Zoom <output data-zoom-value></output></span>
+          <input id="player-zoom" type="range" min="100" max="1200" step="50" value="600" />
+        </label>
+      </section>
+
+      <footer class="time-bar" aria-label="Time">
+        <div class="time-controls">
+          <button type="button" class="tool" data-play aria-label="Play"></button>
+          <button type="button" class="tool" data-step="-1" aria-label="Previous frame (←)" title="Previous frame (←)"></button>
+          <button type="button" class="tool" data-step="1" aria-label="Next frame (→)" title="Next frame (→)"></button>
+          <label class="visually-hidden" for="speed">Speed</label>
+          <select id="speed" data-speed title="Speed">
+            <option value="0.25">0.25×</option>
+            <option value="0.5">0.5×</option>
+            <option value="1">1×</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+            <option value="8">8×</option>
+          </select>
+          <label class="visually-hidden" for="repeat">Repeat</label>
+          <select id="repeat" data-repeat title="At the end">
+            <option value="loop">Loop</option>
+            <option value="bounce">Bounce</option>
+          </select>
+          <button type="button" class="small-button" data-blink aria-pressed="false" title="Blink between visits A and B (B)">Blink</button>
+          <div class="slider-wrap">
+            <input type="range" data-time min="0" max="1000" value="0" aria-label="Time" />
+            <div class="ticks" data-ticks aria-hidden="true"></div>
+          </div>
+          <span class="badge" data-mode-embed></span>
+        </div>
+        <div class="time-info">
+          <output class="mono" data-readout></output>
+          <span class="note" data-progress></span>
+        </div>
+        <div class="filmstrip" data-filmstrip aria-label="Frames"></div>
+      </footer>
+    </main>
+
+    <div class="toasts" aria-live="polite" data-toasts></div>
+    <div class="help-bubble" role="tooltip" data-help-bubble hidden></div>
+  </body>
+</html>

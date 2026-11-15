@@ -1,0 +1,14 @@
+# Backend runtime packages, pinned so every computer gets the same versions.
+# Web server
+fastapi==0.163.0
+uvicorn==0.54.0
+pydantic-settings==2.16.3
+httpx==0.28.1
+diskcache==5.6.3
+pillow==13.0.0
+# Astronomy (used from Phase 2 on)
+astropy==8.0.2
+astroquery==0.4.11
+pyvo==1.10.0
+reproject==0.21.0
+numpy==2.5.4

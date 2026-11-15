@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SPHEREx Xplorer</title>
+    <meta name="description" content="Explore NASA SPHEREx infrared images of any patch of sky and watch it change over time." />
+    <meta name="theme-color" content="#050A18" />
+    <link rel="icon" href="/brand/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" href="/brand/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
+    <link rel="preload" href="/brand/logo-horizontal-white.webp" as="image" type="image/webp" />
+    <script type="module" src="/src/title/main.js"></script>
+  </head>
+  <body class="page-title">
+    <!-- Shown instantly; the 3D scene fades in over it once loaded. -->
+    <div class="sky-fallback" aria-hidden="true"></div>
+    <canvas id="scene" class="scene" aria-hidden="true"></canvas>
+    <div class="veil"><p class="veil-message" role="status" aria-live="polite"></p></div>
+
+    <div class="hero">
+      <header class="hero-top">
+        <h1 class="hero-logo">
+          <picture>
+            <source srcset="/brand/logo-horizontal-white.webp" type="image/webp" />
+            <img src="/brand/logo-horizontal-white.png" alt="SPHEREx Xplorer" width="1600" height="534" />
+          </picture>
+        </h1>
+        <p class="tagline">Watch the infrared sky change.</p>
+      </header>
+
+      <main class="hero-search">
+        <form id="search-form" class="search" role="search" autocomplete="off">
+          <label for="search-input" class="visually-hidden">Search a star or coordinates</label>
+          <input
+            id="search-input"
+            class="search-input"
+            type="search"
+            name="q"
+            spellcheck="false"
+            placeholder="Search a star or coordinates, e.g. Barnard's Star or 17h57m48.97s +04d41m36.1s"
+            aria-describedby="search-message"
+          />
+          <button type="submit" class="btn btn-explore" data-icon="binoculars">Explore</button>
+          <button type="button" class="btn btn-secondary btn-random" data-icon="shuffle" id="random-button">
+            Randomize
+          </button>
+        </form>
+        <p id="search-message" class="search-message" role="status" aria-live="polite"></p>
+
+        <div class="chips" aria-label="Featured targets" data-chips></div>
+
+        <details class="advanced">
+          <summary>Advanced</summary>
+          <div class="advanced-grid">
+            <label>
+              Field of view
+              <span class="fov-row">
+                <input id="fov-value" type="number" min="0.01" step="any" value="10" aria-label="Field of view" />
+                <select id="fov-unit" aria-label="Unit">
+                  <option value="s">″ arcsec</option>
+                  <option value="m" selected>′ arcmin</option>
+                  <option value="d">° degrees</option>
+                </select>
+              </span>
+            </label>
+            <fieldset class="detectors">
+              <legend>Detectors</legend>
+              <span data-detectors></span>
+            </fieldset>
+            <label>
+              Data release
+              <select id="release">
+                <option value="dr1,qr3" selected>DR1 + QR3 (all)</option>
+                <option value="dr1">DR1 only</option>
+                <option value="qr3">QR3 only</option>
+              </select>
+            </label>
+          </div>
+        </details>
+      </main>
+
+      <nav class="hero-links" aria-label="About">
+        <button type="button" class="link-button" data-open="about-dialog">What is SPHEREx?</button>
+        <button type="button" class="link-button" data-open="howto-dialog">How to use</button>
+        <span class="status" data-health>Checking the data server…</span>
+      </nav>
+    </div>
+
+    <section class="coming-soon" aria-label="Coming soon">
+      <article class="panel card">
+        <h2>3D Time Machine</h2>
+        <p>Fly through space and time with the objects you select. <strong>Coming soon.</strong></p>
+      </article>
+      <article class="panel card">
+        <h2>Object Profiles</h2>
+        <p>Every SPHEREx photo, data and fact about one object. <strong>Coming soon.</strong></p>
+      </article>
+    </section>
+
+    <footer class="site-footer" data-footer></footer>
+
+    <dialog id="about-dialog" class="panel dialog">
+      <h2>What is SPHEREx?</h2>
+      <p>
+        SPHEREx is a NASA space telescope launched in 2025. It maps the whole sky in 102 colours of
+        infrared light, invisible to our eyes, and comes back to each spot about every six months.
+      </p>
+      <p>
+        Because it keeps returning, its images show the sky <em>changing</em>: nearby stars and brown dwarfs
+        creeping across the sky, and stars that brighten and fade.
+      </p>
+      <form method="dialog"><button class="btn">Close</button></form>
+    </dialog>
+    <dialog id="howto-dialog" class="panel dialog">
+      <h2>How to use</h2>
+      <ol>
+        <li>Type a star name (like <em>Barnard's Star</em>) or sky coordinates, then press <strong>Explore</strong>.</li>
+        <li>Or press <strong>Randomize</strong> to visit a surprise spot.</li>
+        <li>In the Stellar View, play the time slider to watch the SPHEREx images like a short video.</li>
+      </ol>
+      <p>Coordinates can be decimal degrees (<code>269.452 4.693</code>) or hours and degrees (<code>17h57m48.97s +04d41m36.1s</code>).</p>
+      <form method="dialog"><button class="btn">Close</button></form>
+    </dialog>
+
+    <output id="fps" class="fps mono" hidden></output>
+  </body>
+</html>
