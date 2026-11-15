@@ -147,3 +147,11 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Next.js generated types and local deploy settings
+next-env.d.ts
+.vercel
+
+# Private keys / certificates
+*.pem
+.DS_Store
