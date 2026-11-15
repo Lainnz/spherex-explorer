@@ -32,6 +32,7 @@ export function createFrameOverlay({ container, sky, sequence, reducedMotion }) 
   let framesVisible = true;
   let target = null; // {name, motion}
   let movers = [];
+  let masks = []; // flag overlays: [{bitmap, frame}] drawn with that frame's sky position
   let requested = null;
   const stats = { loops: 0, framesDrawn: 0, missingCorners: 0, lastAlpha: null, lastTransform: null };
 
@@ -62,7 +63,8 @@ export function createFrameOverlay({ container, sky, sequence, reducedMotion }) 
     return position && sky.skyToPixel(position.ra, position.dec);
   }
 
-  function drawFrame(entry, alpha) {
+  /** Draw a picture on its frame's patch of sky; `strength` defaults to the frame opacity. */
+  function drawFrame(entry, alpha, strength = opacity) {
     if (!entry || alpha <= 0) return;
     const { frame, bitmap } = entry;
     const corners = frameCorners(frame.wcs, frame.width, frame.height);
@@ -75,13 +77,13 @@ export function createFrameOverlay({ container, sky, sequence, reducedMotion }) 
     }
     const transform = imageTransform(topLeft, topRight, bottomLeft, frame.width, frame.height);
     context.save();
-    context.globalAlpha = alpha * opacity;
+    context.globalAlpha = alpha * strength;
     context.imageSmoothingEnabled = false; // show SPHEREx's real pixels
     context.transform(...transform);
     context.drawImage(bitmap, 0, 0);
     context.restore();
     stats.framesDrawn += 1;
-    stats.lastAlpha = alpha * opacity;
+    stats.lastAlpha = alpha * strength;
     stats.lastTransform = transform;
   }
 
@@ -156,6 +158,7 @@ export function createFrameOverlay({ container, sky, sequence, reducedMotion }) 
       if (fade < 1) drawFrame(previous, 1 - fade);
       drawFrame(shown, fade);
     }
+    for (const mask of masks) drawFrame(mask, 1, 1); // flag overlays stay fully visible
     const t = sequence.time();
     if (t !== null) {
       drawMovers(t);
@@ -178,6 +181,10 @@ export function createFrameOverlay({ container, sky, sequence, reducedMotion }) 
     },
     setMovers(next) {
       movers = next ?? [];
+    },
+    /** Flag overlays (Flags tab): pictures on the same grid as `frame`. */
+    setMasks(next) {
+      masks = next ?? [];
     },
     /** The picture currently on screen (for the Frame Player). */
     shown: () => shown,

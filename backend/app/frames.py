@@ -21,6 +21,7 @@ from scipy.ndimage import maximum_filter
 from . import irsa
 from .grid import Grid, GridImage, make_grid, to_grid
 from .motion import has_motion, position_at
+from .observations import SEARCH_EPOCH
 from .products import ivw_mean, load_product, product_exists, product_id, save_product, white_merge
 from .render import percent_stretch
 
@@ -54,9 +55,11 @@ class FrameGroup:
 
 
 def grid_center(ra: float, dec: float, rows: list[dict], motion: dict | None) -> tuple[float, float]:
-    """Centre the grid where a moving target was at the middle of the images' dates."""
+    """Centre the grid on a moving target's position at a fixed date (2026.0, the same as
+    the search). Fixed, not the images' average date, so a quick preview and the full
+    set of frames ask IRSA for identical cutouts and share the downloads."""
     if has_motion(motion) and rows:
-        return position_at(motion, float(np.mean([row["t_mid"] for row in rows])))
+        return position_at(motion, SEARCH_EPOCH)
     return ra, dec
 
 
@@ -148,6 +151,7 @@ def frame_message(pid: str, meta: dict, vmin: float, vmax: float, softening: flo
         **{k: meta[k] for k in ("label", "t_mid", "t_start", "t_end", "visit", "detectors", "wavelength_um",
                                 "n_images", "releases", "width", "height", "wcs", "unit")},
         "filled_pixels": meta.get("filled_pixels", 0),
+        "obs_ids": meta.get("obs_ids", []),
         "vmin": vmin,
         "vmax": vmax,
         "png_url": f"/api/product/{pid}.png?{stretch}",

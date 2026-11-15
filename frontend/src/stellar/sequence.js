@@ -14,6 +14,7 @@ export function createSequence(initialDisplay) {
   const frames = []; // time-sequence frames, in arrival order
   const results = []; // operation results (stack, difference, colour)
   let visits = [];
+  let grid = null; // the frames' grid centre and size (from the "start" message)
   let band = 'all';
   let time = null;
   let pinned = null; // an operation result shown instead of the time sequence
@@ -82,11 +83,26 @@ export function createSequence(initialDisplay) {
       notify('visits');
     },
     visits: () => visits,
+    /** Grid centre/size of the frames; /api/flags and /api/meta use it to line up. */
+    setGrid(next) {
+      grid = next;
+    },
+    grid: () => grid,
     addFrame(frame) {
       frames.push(frame);
       ranges.delete(groupOf(frame)); // its group's shared range now includes this frame
       for (const other of frames) if (groupOf(other) === groupOf(frame)) bitmaps.delete(other.id);
       if (time === null) time = frame.t_mid;
+      notify('frames');
+    },
+    /** Swap in a whole new set of frames (the sharper ones), keeping the time and any results. */
+    replaceFrames(next) {
+      frames.splice(0, frames.length, ...next);
+      ranges = new Map();
+      bitmaps = new Map(); // not closed: the picture on screen may still be using one
+      const list = playlist();
+      if (list.length && time !== null) time = frameAt(list, time).t_mid;
+      else time = list[0]?.t_mid ?? null;
       notify('frames');
     },
     frames: () => frames,

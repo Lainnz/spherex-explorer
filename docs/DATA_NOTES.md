@@ -406,6 +406,24 @@ Time for a new spot: SIA search 20 s–3 min, then cutouts (~4 MB each, ~1–2 m
   and more code.
 - **Deployment:** host the backend in the US near IRSA/AWS (Hugging Face Spaces).
 
+## 19. Phase 9: popups and data tabs
+- `/api/meta` adds `zodi_at_target_mjy_sr` (median of ZODI in a 5 × 5 box around the
+  target). Frame messages include `obs_ids`, so the Info and Flags tabs know which image
+  to describe.
+- Charts: Chart.js 4.6.1 + chartjs-chart-error-bars 4.4.5 (type `scatterWithErrorBars`,
+  points `{x, y, yMin, yMax}`), loaded only when a chart tab opens (~70 KB gzipped).
+- Demo data now saves Info/Flags for every frame plus moving Gaia stars. Barnard's Star
+  and Epsilon Indi B were rebuilt (2026-11-15). The rebuild stopped at WISE 0855 when
+  IRSA answered 503 for a flag mask, after the old folder had been deleted. Restored
+  from git; `build_demo_data.py` now builds into a temporary folder and swaps only on
+  success, and a failed mask or image detail is skipped. **To do:** rebuild WISE 0855,
+  RW Aurigae and R Draconis when IRSA is healthy.
+- **No ready-made image index on AWS.** `s3://nasa-irsa-spherex/` holds `dr1/`, `qr2/`,
+  `qr3/` (level2 images by week plus calibration folders such as
+  `solid_angle_pixel_map/`) but no catalogue of image footprints. A full-sky index would
+  have to come from IRSA TAP (`spherex.obscore`), which timed out (300 s) and SIA gave
+  502 on 2026-11-15.
+
 ## Sources
 IRSA SIA (`https://irsa.ipac.caltech.edu/SIA`), IRSA cutouts (IBE), IRSA HiPS
 properties, CDS MocServer, npm registry/jsDelivr for Aladin Lite.

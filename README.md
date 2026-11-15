@@ -28,7 +28,7 @@ pip install -r backend\requirements-dev.txt
 cd backend
 uvicorn app.main:app --reload --port 8000
 ```
-Check it at http://localhost:8000/api/health
+Check it at http://127.0.0.1:8000/api/health
 
 **Tests:** `npm test` (in `frontend`) and `python -m pytest` (in `backend`).
 

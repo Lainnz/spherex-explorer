@@ -3,14 +3,18 @@
 Run locally (from the backend folder):  uvicorn app.main:app --reload --port 8000
 Try it in a browser: http://localhost:8000/docs
 """
+import asyncio
 import io
 import json
 import math
+import warnings
+from contextlib import asynccontextmanager
 from typing import Literal
 
 import numpy as np
 from astropy.io import fits
 from astropy.time import Time
+from astropy.wcs import FITSFixedWarning, WCS
 from fastapi import FastAPI, Query
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,12 +31,22 @@ from .objects import fast_movers, identify
 from .observations import find_observations, recall_image
 from .photometry import photometry_stream
 from .products import STACK_METHODS, difference, load_product, product_id, products_dir, save_product
+from .random_pool import keep_warm, take_spot
 from .random_target import random_target
 from .render import percent_stretch, stretch_to_unit, to_f32, to_fits, to_png
 from .resolve import ResolverUnavailable, resolve
 from .settings import settings
 
-app = FastAPI(title="SPHEREx Xplorer API", version=__version__)
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Keep a pool of pre-searched random spots ready while the server runs."""
+    task = asyncio.create_task(keep_warm()) if settings.warm_random_pool else None
+    yield
+    if task:
+        task.cancel()
+
+
+app = FastAPI(title="SPHEREx Xplorer API", version=__version__, lifespan=lifespan)
 
 # Browsers block calls to another website unless that website says it's allowed (CORS).
 app.add_middleware(
@@ -110,10 +124,11 @@ async def resolve_name(name: str = Query(min_length=1, max_length=100)):
 
 @app.get("/api/random")
 def random_position() -> dict:
-    """A random sky position (sometimes a famous one) for the Randomize button."""
+    """A random sky position (sometimes a famous one) for the Randomize button.
+    Prefers spots the server has already searched, so they open quickly."""
     targets = load_targets()
     default_fov = load_datasets()["limits"]["default_fov_arcsec"]
-    return random_target(targets["interesting"], targets["targets"], default_fov)
+    return random_target(targets["interesting"], targets["targets"], default_fov, take_pooled=take_spot)
 
 
 # ---------- shared checks for /api/observations and /api/frames ----------
@@ -593,6 +608,7 @@ async def image_meta(
     row, _, grid_image, content = loaded
     cards = await run_in_threadpool(_image_headers, content)
     version = next((card[2] for card in cards if card[1] == "VERSION"), None)
+    zodi = await run_in_threadpool(_zodi_at, content, row["target_ra"], row["target_dec"])
     return json_safe({
         "obs_id": obs_id,
         "detector": detector,
@@ -608,10 +624,23 @@ async def image_meta(
         "exposure_s": round((row["t_end"] - row["t_start"]) * 86400, 1),
         "processing_version": row["processing_version"],
         "pipeline_version": version,
+        "zodi_at_target_mjy_sr": zodi,
         "visit": row.get("visit"),
         "irsa_url": row["access_url"],
         "header": cards,
     })
+
+
+def _zodi_at(content: bytes, ra: float, dec: float) -> float | None:
+    """Zodiacal light (sunlight scattered by solar-system dust) at the target, MJy/sr:
+    the median of the ZODI model in a 5 × 5 box around the target's pixel."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FITSFixedWarning)
+        with fits.open(io.BytesIO(content)) as hdul:
+            x, y = (int(round(float(v))) for v in WCS(hdul["IMAGE"].header).world_to_pixel_values(ra, dec))
+            zodi = hdul["ZODI"].data
+            box = zodi[max(0, y - 2):y + 3, max(0, x - 2):x + 3]
+    return round(float(np.nanmedian(box)), 4) if box.size and np.isfinite(box).any() else None
 
 
 def _image_headers(content: bytes) -> list[list]:

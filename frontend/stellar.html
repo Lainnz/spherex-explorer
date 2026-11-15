@@ -25,7 +25,23 @@
         <button type="submit" class="icon-button" data-icon="binoculars" aria-label="Explore"></button>
         <button type="button" class="icon-button" data-icon="shuffle" id="header-random" aria-label="Randomize"></button>
       </form>
-      <div class="header-actions">
+      <div class="header-actions" data-lists>
+        <details class="list-menu" data-list="favourites">
+          <summary title="Favourites (saved on this device)">★ <span data-count>0</span></summary>
+          <div class="panel list-dropdown">
+            <h3>Favourites</h3>
+            <ul></ul>
+            <p class="note small">Saved on this device; accounts coming soon.</p>
+          </div>
+        </details>
+        <details class="list-menu" data-list="selected">
+          <summary title="Selected objects (for the coming 3D Time Machine)">✓ <span data-count>0</span></summary>
+          <div class="panel list-dropdown">
+            <h3>Selected</h3>
+            <ul></ul>
+            <p class="note small">Saved on this device; the 3D Time Machine (coming soon) will use this list.</p>
+          </div>
+        </details>
         <span class="badge" data-release title="SPHEREx data releases in use"></span>
         <span class="badge" data-mode>…</span>
         <button type="button" class="header-button" data-icon="link" id="copy-link">Copy link</button>
@@ -187,11 +203,66 @@
       <aside class="panel drawer" aria-label="Details">
         <div class="tabs" role="tablist">
           <button role="tab" aria-selected="true" aria-controls="tab-layers" id="tab-layers-button">Layers</button>
-          <button role="tab" aria-selected="false" disabled title="Phase 9">Info</button>
-          <button role="tab" aria-selected="false" disabled title="Phase 9">Flags</button>
-          <button role="tab" aria-selected="false" disabled title="Phase 9">Spectrum</button>
-          <button role="tab" aria-selected="false" disabled title="Phase 9">Light curve</button>
+          <button role="tab" aria-selected="false" aria-controls="tab-info" id="tab-info-button">Info</button>
+          <button role="tab" aria-selected="false" aria-controls="tab-flags" id="tab-flags-button">Flags</button>
+          <button role="tab" aria-selected="false" aria-controls="tab-spectrum" id="tab-spectrum-button">Spectrum</button>
+          <button role="tab" aria-selected="false" aria-controls="tab-curve" id="tab-curve-button">Light curve</button>
         </div>
+
+        <section id="tab-info" role="tabpanel" aria-labelledby="tab-info-button" class="tab-body" hidden>
+          <h3 class="panel-heading">This frame <button type="button" class="help" data-help="A frame is what you see at one moment of the time slider: one or more SPHEREx images added together.">?</button></h3>
+          <dl class="info-list" data-frame-info></dl>
+          <h3 class="panel-heading">The SPHEREx image <button type="button" class="help" data-help="Details of the first original SPHEREx image used in this frame, straight from NASA's files.">?</button></h3>
+          <div data-image-info></div>
+        </section>
+
+        <section id="tab-flags" role="tabpanel" aria-labelledby="tab-flags-button" class="tab-body" hidden>
+          <p>
+            Quality: <span class="quality-badge" data-quality></span>
+            <button type="button" class="help" data-help="Good: under 5% of the pixels in view have a problem flag. Use with care: under 20%, or a problem right on the target. Poor: 20% or more.">?</button>
+          </p>
+          <p class="note small">
+            SPHEREx marks every pixel that might be unreliable. Tick <strong>Show</strong> to colour those pixels on the sky;
+            untick <strong>Leave out</strong> to keep them in the frames.
+          </p>
+          <div class="flags-table">
+            <table>
+              <thead><tr><th>Show</th><th>Flag</th><th>Pixels</th><th title="On the target">Target</th><th>Leave out</th></tr></thead>
+              <tbody data-flags></tbody>
+            </table>
+          </div>
+          <button type="button" class="small-button" data-apply-exclusions>Remake frames with these choices</button>
+        </section>
+
+        <section id="tab-spectrum" role="tabpanel" aria-labelledby="tab-spectrum-button" class="tab-body" hidden>
+          <p><strong data-subject></strong> <button type="button" class="help" data-help="A spectrum shows how bright something is at each infrared colour. SPHEREx's wavelength changes across each image, so each new image measures a slightly different colour.">?</button></p>
+          <p class="note small" data-photometry-status></p>
+          <p class="warning-note" data-warning hidden></p>
+          <div class="chart-box"><canvas aria-label="Spectrum chart"></canvas></div>
+          <p class="note small" data-spectrum-summary></p>
+          <div class="toggles">
+            <label><input type="checkbox" id="bin-channels" /> Combine into SPHEREx's 102 channels</label>
+            <label><input type="checkbox" id="show-flagged" /> Show flagged points (hollow)</label>
+            <label class="inline-select">Colour by
+              <select id="colour-by"><option value="detector">detector</option><option value="visit">visit</option></select>
+            </label>
+          </div>
+          <button type="button" class="small-button" data-csv>Download CSV</button>
+          <p class="note small" data-method></p>
+        </section>
+
+        <section id="tab-curve" role="tabpanel" aria-labelledby="tab-curve-button" class="tab-body" hidden>
+          <p><strong data-subject></strong> <button type="button" class="help" data-help="A light curve shows brightness over time. To compare like with like, choose a narrow range of wavelengths.">?</button></p>
+          <p class="note small" data-photometry-status></p>
+          <div class="chart-box"><canvas aria-label="Light curve chart"></canvas></div>
+          <div class="fov-row window-row">
+            <label>From <input id="window-min" type="number" step="0.01" min="0.7" max="5.1" placeholder="0.75" /> µm</label>
+            <label>to <input id="window-max" type="number" step="0.01" min="0.7" max="5.1" placeholder="5.00" /> µm</label>
+          </div>
+          <label class="toggles"><input type="checkbox" id="curve-relative" /> Relative brightness from the star's outer glow
+            <button type="button" class="help" data-help="For stars too bright for SPHEREx (their centre overflows), this measures the glow around them instead. It shows how the brightness changes (2 = twice as bright as usual), not the exact brightness.">?</button></label>
+          <button type="button" class="small-button" data-csv>Download CSV</button>
+        </section>
         <section id="tab-layers" role="tabpanel" aria-labelledby="tab-layers-button" class="tab-body">
           <label class="field">
             <span>Sky map <button type="button" class="help" data-help="The picture of the whole sky behind everything. The SPHEREx map comes in 102 infrared colours.">?</button></span>

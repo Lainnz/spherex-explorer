@@ -122,6 +122,7 @@ def test_frames_stream_and_products(fake_cutouts):
     frames = [m for m in messages if m["type"] == "frame"]
     assert len(frames) == messages[0]["frames_total"] >= 2
     assert all(f["detectors"] == [3] and f["width"] == 49 for f in frames)
+    assert all(f["obs_ids"] for f in frames)  # the Info tab needs to know which images
     # All D3 frames share one brightness range, so blinking is fair.
     assert len({(f["vmin"], f["vmax"]) for f in frames}) == 1
 

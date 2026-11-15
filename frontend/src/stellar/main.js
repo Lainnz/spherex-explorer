@@ -21,12 +21,18 @@ import { setupControlPanel } from './control-panel.js';
 import { setupDisplayPanel } from './display-panel.js';
 import { setupSharing } from './embed.js';
 import { createFrameOverlay } from './frame-overlay.js';
+import { setupFlagsPanel } from './flags-panel.js';
 import { setupFramePlayer } from './frame-player.js';
 import { loadFrames } from './frames-source.js';
+import { setupInfoPanel } from './info-panel.js';
 import { setupLayers } from './layers.js';
+import { setupListsMenu } from './lists-menu.js';
 import { parseRegion } from './nav-math.js';
 import { setupNavTools } from './nav-tools.js';
+import { setupObjectPopup } from './object-popup.js';
 import { setupOperations } from './operations.js';
+import { setupPhotometry } from './photometry-panel.js';
+import { setupTabs } from './tabs.js';
 import { createSequence } from './sequence.js';
 import { createSkyView, SKY_MAPS } from './sky-view.js';
 import { setupTimeBar } from './time-bar.js';
@@ -37,6 +43,8 @@ const limits = datasets.limits;
 const START_FOV_DEG = 45; // start zoomed out, then ease in (PLAN.md §8.3)
 const EASE_IN_SECONDS = 2.5;
 const OBSERVATIONS_TIMEOUT_MS = 330_000; // IRSA searches take 2–3 minutes the first time
+// First frames from a handful of images (~4 MB each), then the full set in the background.
+const QUICK_PREVIEW_IMAGES = 24;
 
 const $ = (selector) => document.querySelector(selector);
 const { state, notices } = readStellarState(window.location.search, {
@@ -196,9 +204,15 @@ function setupSequence({ sky, place, live, home }) {
 
   let controller = null;
   let firstLoad = true;
+  let excludeFlags = null; // null = the server's default bad-pixel list (Flags tab can change it)
 
   async function loadMovers() {
-    if (!live) return;
+    if (!live) {
+      // Saved with the demo data (for the featured target's own field).
+      const demo = place.featured ? await loadDemo(place.featured.slug) : null;
+      overlay.setMovers(demo?.movers ?? []);
+      return;
+    }
     try {
       const radius = Math.min(0.5, Math.max(0.02, (state.fov / 3600) * 0.75));
       const { movers } = await getJson('/api/movers', { ra: home.ra, dec: home.dec, radius });
@@ -223,6 +237,7 @@ function setupSequence({ sky, place, live, home }) {
       ...(atTarget ? { target: place.featured.slug } : {}),
       ...(state.release ? { releases: state.release } : {}),
       ...(state.det && state.det.length > 1 ? { detectors: state.det } : {}),
+      ...(excludeFlags ? { exclude_flags: excludeFlags } : {}),
     };
     let demo = null;
     if (!live && atTarget) {
@@ -232,11 +247,16 @@ function setupSequence({ sky, place, live, home }) {
 
     let total = 0;
     let ready = 0;
+    let imagesInPreview = 0;
+    let previewed = false;
+    // Live: a quick preview from a few images first, then the full set (sharpenInBackground).
     const attempt = (useLive) => loadFrames({
-      live: useLive, request, demo, signal,
+      live: useLive, request: useLive ? { ...request, max_images: QUICK_PREVIEW_IMAGES } : request, demo, signal,
       onStart: (start) => {
         total = start.frames_total;
+        imagesInPreview = start.images_total;
         warnOnce(start.warning);
+        if (start.grid) sequence.setGrid(start.grid);
         sequence.setVisits(start.visits ?? []);
         const downloads = start.images_to_download;
         timeBar.setProgress(downloads
@@ -258,6 +278,7 @@ function setupSequence({ sky, place, live, home }) {
     try {
       try {
         await attempt(live);
+        previewed = live;
       } catch (error) {
         if (signal.aborted) return;
         // Live failed: fall back to saved data for featured targets.
@@ -287,12 +308,60 @@ function setupSequence({ sky, place, live, home }) {
       if (state.autoplay) timeBar.setPlaying(true);
     }
     firstLoad = false;
+    // A preview used every image there is? Then there's nothing sharper to fetch.
+    if (previewed && imagesInPreview >= QUICK_PREVIEW_IMAGES) sharpenInBackground(request, signal);
   }
 
-  return { load };
+  /**
+   * Fetch the full set of images while the preview plays, then swap the sharper frames in
+   * at once, keeping the date and band. The frames' grid doesn't depend on how many images
+   * are used, so the preview's downloads are reused.
+   */
+  async function sharpenInBackground(request, signal) {
+    const fresh = [];
+    let start = null;
+    try {
+      await loadFrames({
+        live: true, request, signal,
+        onStart: (message) => {
+          start = message;
+          timeBar.setProgress(`${sequence.playlist().length} preview frames · getting more images for sharper frames…`);
+        },
+        onFrame: (frame) => {
+          fresh.push(frame);
+          timeBar.setProgress(`${sequence.playlist().length} preview frames · sharper frames ${fresh.length} of ${start?.frames_total ?? '?'}…`);
+        },
+        onProgress: () => {},
+        onDone: () => {},
+      });
+    } catch {
+      if (!signal.aborted) timeBar.setProgress(`${sequence.playlist().length} frames (preview) · live from NASA IRSA`);
+      return;
+    }
+    if (signal.aborted || !fresh.length) return;
+    if (start?.grid) sequence.setGrid(start.grid);
+    sequence.setVisits(start?.visits ?? []);
+    sequence.replaceFrames(fresh);
+    timeBar.setProgress(`${fresh.length} frames from ${start?.images_total ?? '?'} images · live from NASA IRSA`);
+    await sequence.prepareAll();
+  }
+
+  /** Flags tab: remake the frames leaving out a different set of flagged pixels. */
+  function setExclude(flags) {
+    if (!live) {
+      toast('Remaking frames needs the live data server; saved demo frames use the standard bad-pixel list.', 'warning');
+      return;
+    }
+    excludeFlags = flags;
+    load();
+  }
+
+  return { load, setExclude, sequence, overlay };
 }
 
 // --- Start ---------------------------------------------------------------------------------------
+let popup = null; // the click-to-identify popup (created once the sky is ready)
+
 async function main() {
   notices.forEach((notice) => toast(notice, 'warning', 9));
 
@@ -348,6 +417,7 @@ async function main() {
     movedChip: $('[data-moved-chip]'),
     home,
     reducedMotion,
+    onSkyClick: (click) => popup?.show(click),
     onSetHome: (here) => {
       // A new spot: it's no longer the named target.
       state.ra = here.ra;
@@ -363,6 +433,45 @@ async function main() {
     },
   });
   const images = setupSequence({ sky, place, live, home });
+
+  // --- Phase 9: clicking objects, the data tabs, favourites ----------------------------------
+  const getDemo = () => (place.featured ? loadDemo(place.featured.slug) : Promise.resolve(null));
+  const targetSubject = () => {
+    const atTarget = Boolean(place.featured) && home.ra === place.ra && home.dec === place.dec;
+    return {
+      name: atTarget ? place.featured.name : (place.name ?? `${formatRa(home.ra)} ${formatDec(home.dec)}`),
+      ra: home.ra,
+      dec: home.dec,
+      target: atTarget ? place.featured.slug : undefined,
+      isDemoTarget: atTarget,
+    };
+  };
+  setupListsMenu($('[data-lists]'));
+  const photometry = setupPhotometry({ spectrumTab: $('#tab-spectrum'), curveTab: $('#tab-curve'), state, live, getDemo });
+  const tabs = setupTabs($('.drawer'), {
+    onShow: (panelId) => {
+      if (panelId !== 'tab-spectrum' && panelId !== 'tab-curve') return;
+      if (!photometry.subject()) photometry.measure(targetSubject()); // measured when first needed
+      photometry.refresh();
+    },
+  });
+  setupInfoPanel({ root: $('#tab-info'), sequence: images.sequence, state, live, getDemo });
+  setupFlagsPanel({
+    root: $('#tab-flags'), sequence: images.sequence, overlay: images.overlay, state, live, getDemo,
+    onExcludeChange: (flags) => images.setExclude(flags),
+  });
+  popup = setupObjectPopup({
+    container: $('#sky'), sky, sequence: images.sequence, live, place, getDemo,
+    onMeasure: (subject) => {
+      tabs.open('tab-spectrum');
+      photometry.measure(subject);
+    },
+  });
+  // In move mode Aladin receives the clicks itself.
+  sky.on('click', (click) => {
+    if (!click.isDragging) popup.show(click);
+  });
+
   sharing = setupSharing({
     embed: Boolean(state.embed),
     copyButton: $('#copy-link'),

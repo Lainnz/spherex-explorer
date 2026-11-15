@@ -15,8 +15,8 @@ async function fetchFloat32(url, signal, expectedLength) {
   return data;
 }
 
-/** Read an NDJSON stream message by message. */
-async function* readLines(response) {
+/** Read an NDJSON stream message by message (also used for photometry). */
+export async function* readLines(response) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';

@@ -350,6 +350,7 @@ def test_flags_and_meta_for_a_listed_image(fake_cutouts):
     meta = client.get(f"/api/meta/{image['obs_id']}", params=params).json()
     assert meta["release"] == image["release"] and meta["pipeline_version"] == "7.0.5"
     assert meta["exposure_s"] > 0
+    assert 0 < meta["zodi_at_target_mjy_sr"] < 1  # the fixture's ZODI median is ~0.098
     assert ["IMAGE", "DETECTOR", 3] == [c for c in meta["header"] if c[1] == "DETECTOR"][0][:3]
 
 

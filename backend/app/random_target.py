@@ -25,9 +25,14 @@ def uniform_sky_position(rng: np.random.Generator) -> tuple[float, float]:
 
 
 def random_target(
-    interesting: list[dict], featured: list[dict], default_fov: float, rng: np.random.Generator | None = None
+    interesting: list[dict], featured: list[dict], default_fov: float, rng: np.random.Generator | None = None,
+    take_pooled=None,
 ) -> dict:
-    """{ra, dec, fov_arcsec, name, slug?, source} for the Randomize button."""
+    """{ra, dec, fov_arcsec, name, slug?, source} for the Randomize button.
+
+    `take_pooled(rng)` hands out a spot the server has already searched (random_pool.py),
+    so it opens instantly; without one, any point on the sky is picked.
+    """
     rng = rng or np.random.default_rng()
     spots = [*interesting, *featured]
     if spots and rng.random() < INTERESTING_CHANCE:
@@ -40,5 +45,8 @@ def random_target(
             "slug": spot.get("slug"),
             "source": "interesting",
         }
+    pooled = take_pooled(rng) if take_pooled else None
+    if pooled:
+        return {"ra": pooled["ra"], "dec": pooled["dec"], "fov_arcsec": default_fov, "name": None, "source": "pre-searched"}
     ra, dec = uniform_sky_position(rng)
     return {"ra": round(ra, 5), "dec": round(dec, 5), "fov_arcsec": default_fov, "name": None, "source": "uniform"}

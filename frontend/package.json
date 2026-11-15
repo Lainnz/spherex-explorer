@@ -13,6 +13,8 @@
     "@fontsource-variable/exo-2": "5.3.0",
     "@fontsource-variable/jetbrains-mono": "5.3.0",
     "@fontsource-variable/orbitron": "5.3.0",
+    "chart.js": "4.6.1",
+    "chartjs-chart-error-bars": "4.4.5",
     "lucide": "1.73.0",
     "three": "0.187.0"
   },

@@ -61,9 +61,24 @@ def save(path: Path, content: bytes) -> str:
 
 
 def build_target(target: dict) -> dict:
+    """Build into a temporary folder and only replace the saved data if everything worked:
+    on 2026-11-15 an IRSA error halfway through left WISE 0855's demo data half-deleted."""
+    slug = target["slug"]
+    final = DEMO / slug
+    building = DEMO / f".{slug}.building"
+    shutil.rmtree(building, ignore_errors=True)
+    try:
+        result = build_into(target, building)
+    except BaseException:
+        shutil.rmtree(building, ignore_errors=True)
+        raise
+    shutil.rmtree(final, ignore_errors=True)
+    building.rename(final)
+    return result
+
+
+def build_into(target: dict, folder: Path) -> dict:
     slug, settings = target["slug"], SETTINGS[target["slug"]]
-    folder = DEMO / slug
-    shutil.rmtree(folder, ignore_errors=True)
     fov = target["demo"]["fov_arcsec"]
     query = {"target": slug, "fov_arcsec": fov, "detectors": settings["detectors"],
              "max_images": settings["max_images"], "mode": "epoch"}
@@ -105,21 +120,41 @@ def build_target(target: dict) -> dict:
         "target": slug, "fov_arcsec": fov, "max_images": PHOTOMETRY_IMAGES,
     })
 
-    # 4. Flags and details for the first image of the first frame (shown in the Info and
-    #    Flags tabs), with the flag-overlay masks that actually have pixels.
-    first = observations["observations"][0]  # earliest image, part of the first frame
+    # 4. Flags and details (Info and Flags tabs) for the first image of every frame, with
+    #    the flag-overlay masks that actually have pixels.
     grid = start["grid"]
-    image_params = {"detector": first["detector"], "ra": grid["ra"], "dec": grid["dec"], "fov_arcsec": fov}
-    image_key = f"{first['obs_id']}:D{first['detector']}"
-    flags = get_json(f"/api/flags/{first['obs_id']}", image_params)
-    for flag in flags["flags"]:
-        if flag["percent_of_pixels"] > 0:
-            response = client.get(flag["mask_url"])
-            response.raise_for_status()
-            flag["mask_url"] = "flags/" + save(folder / "flags" / f"{flag['name']}.png", response.content)
-        else:
-            flag["mask_url"] = None
-    meta = get_json(f"/api/meta/{first['obs_id']}", image_params)
+    flags_by_image, meta_by_image = {}, {}
+    for frame in frames:
+        if len(frame["detectors"]) != 1 or not frame.get("obs_ids"):
+            continue
+        obs_id, detector = frame["obs_ids"][0], frame["detectors"][0]
+        image_key = f"{obs_id}:D{detector}"
+        if image_key in flags_by_image:
+            continue
+        image_params = {"detector": detector, "ra": grid["ra"], "dec": grid["dec"], "fov_arcsec": fov}
+        try:
+            flags = get_json(f"/api/flags/{obs_id}", image_params)
+            meta = get_json(f"/api/meta/{obs_id}", image_params)
+        except Exception as error:  # IRSA trouble for this image: the frame still works
+            print(f"  no details for {image_key}: {error}", flush=True)
+            continue
+        for flag in flags["flags"]:
+            mask_url, flag["mask_url"] = flag["mask_url"], None
+            if flag["percent_of_pixels"] <= 0:
+                continue
+            response = client.get(mask_url)
+            if response.status_code == 200:
+                name = f"{obs_id}_D{detector}_{flag['name']}.png"
+                flag["mask_url"] = "flags/" + save(folder / "flags" / name, response.content)
+        flags_by_image[image_key] = flags
+        meta_by_image[image_key] = meta
+
+    # 4b. Fast-moving Gaia stars for the time slider's markers (none is fine).
+    try:
+        movers = get_json("/api/movers", {"ra": target["ra"], "dec": target["dec"],
+                                          "radius": min(0.5, max(0.02, fov / 3600 * 0.75))})["movers"]
+    except Exception:
+        movers = []
 
     # 5. The click-to-identify answer for the target itself, at the middle of the images' dates.
     middle = frames[len(frames) // 2]
@@ -137,8 +172,9 @@ def build_target(target: dict) -> dict:
         "observations": observations,
         "frames_stream": frames_stream,
         "photometry_stream": photometry_stream,
-        "flags": {image_key: flags},
-        "meta": {image_key: meta},
+        "flags": flags_by_image,
+        "meta": meta_by_image,
+        "movers": movers,
         "objects": [object_info],
         "notes": demo_notes(photometry_stream),
     }

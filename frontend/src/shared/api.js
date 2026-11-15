@@ -1,9 +1,12 @@
 /**
  * The single place where the website talks to our backend (helper server).
- * In development the backend runs at http://localhost:8000; on GitHub Pages the
+ * In development the backend runs at http://127.0.0.1:8000; on GitHub Pages the
  * address comes from the VITE_API_BASE build variable.
+ * 127.0.0.1, not "localhost": Windows tries IPv6 (::1) first for localhost, uvicorn only
+ * listens on IPv4, and the refused attempt took ~2 s on 2026-11-15, enough to make the
+ * 3-second health check below give up and show demo mode.
  */
-export const API_BASE = (import.meta.env.VITE_API_BASE || 'http://localhost:8000').replace(/\/$/, '');
+export const API_BASE = (import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000').replace(/\/$/, '');
 
 /** An error with a message that's safe to show to people as-is. */
 export class FriendlyError extends Error {
