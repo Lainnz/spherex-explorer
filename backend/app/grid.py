@@ -62,7 +62,7 @@ def make_grid(ra: float, dec: float, fov_arcsec: float, pixel_scale_arcsec: floa
     return Grid(wcs=wcs, width=size, height=size)
 
 
-def _wavelength_at(hdul: fits.HDUList, x: float, y: float) -> tuple[float | None, float | None]:
+def wavelength_at(hdul: fits.HDUList, x: float, y: float) -> tuple[float | None, float | None]:
     """Wavelength and bandwidth (µm) at an image pixel, from the spectral WCS (key "W")."""
     try:
         # The header's SIP distortion terms belong to the sky WCS, not the wavelength
@@ -108,7 +108,7 @@ def to_grid(
             bad = (flags & exclusion_mask(definitions, exclude_flags)) != 0
 
             x, y = wcs_in.world_to_pixel_values(target_ra, target_dec)
-            wavelength, bandwidth = _wavelength_at(hdul, float(x), float(y))
+            wavelength, bandwidth = wavelength_at(hdul, float(x), float(y))
 
             def resample(data: np.ndarray, order: str = "bilinear") -> tuple[np.ndarray, np.ndarray]:
                 return reproject_interp((data, wcs_in), grid.wcs, shape_out=grid.shape, order=order)

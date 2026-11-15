@@ -215,6 +215,55 @@ Search radius 0.01° around each target's mid-2026 predicted position.
   the predicted path. Barnard's Star's D1 difference shows its northward shift (about 11″,
   under 2 pixels) as a bright north / dark south pair.
 
+## 12. Phase 4 findings
+- **Photometry** (`backend/app/photometry.py`): circle of radius 2 px, sky ring 4–7 px
+  (sigma-clipped median), 5×5 sub-pixel aperture weights, `IMAGE − ZODI`. MJy/sr × nominal
+  pixel solid angle (6.15″)² = 8.89e-10 sr → µJy. **TODO:** DR1 per-pixel solid-angle maps
+  (IRSA's source-discovery tutorial reads them from S3) would make fluxes exact; until
+  then they're labelled approximate. Tested on a fake star added to the real cutout's
+  WCS: recovered within 3σ of its true aperture flux, and empty sky gives ≈ 0.
+- **Crowded fields.** In the Barnard's Star D3 cutout, 13% of pixels are > 3σ above the
+  sky median, and the mean sky is 0.145 MJy/sr above the clipped median. Random
+  apertures there average +285 µJy (about 4σ) because they catch faint stars. That's
+  physics, not a bug, but expect faint-target fluxes to be biased high in crowded fields.
+- **Pipeline VERSION** is in the PRIMARY header, not IMAGE. `/api/meta` returns both
+  headers as `[section, key, value, comment]`.
+- **SIMBAD TAP** (Harvard mirror) tables used: `basic` (oid, main_id, ra, dec, otype,
+  sp_type, pmra, pmdec, plx_value, plx_err, rvz_radvel), `ident` (id, oidref), `otypedef`
+  (otype, label, description, e.g. `BY*` = "BY Dra Variable"), and `allfluxes` (oidref,
+  U B V G R I J H K …).
+- **Gaia DR3** (`gaiadr3.gaia_source` at https://gea.esac.esa.int/tap-server/tap) has a
+  total proper motion column `pm`. `pm > 10000` returns only Barnard's Star.
+- **Click-to-identify vs. motion.** Catalogue epochs are 2000 (SIMBAD) and 2016 (Gaia). By
+  2026, Barnard's Star sits about 270″ from its SIMBAD position and about 100″ from its
+  Gaia one. `/api/object` also searches 5′ for objects moving > 1″/yr and moves all
+  candidates to the viewing date before choosing the nearest.
+- **Flags** get plain-English labels in `backend/app/flag_labels.json`. Quality badge:
+  Good < 5% bad-flag pixels in view ≤ Use with care < 20% ≤ Poor; a bad flag on the
+  target pixel caps it at "Use with care".
+- **Saturation.** OVERFLOW sits inside the photometry circle in 57/57 Barnard's Star,
+  53/59 RW Aurigae and 41/41 R Draconis images: these stars are too bright for SPHEREx.
+  Saturated points now report `flux_ujy: null` and `saturated: true`. Skipping the
+  overflowed pixels had produced meaningless values near 0. The stream's `done` message
+  warns when over half the points are saturated. **So the plan's check "R Draconis should
+  vary" can't be met with photometry.** Its variation is visible in the Phase 3 contact
+  sheet. Idea for later: measure saturated stars from the unsaturated "wings" (a ring
+  around the core) as a relative light curve.
+- **Blending (WISE 0855).** A Gaia star (G = 16.3) lies within the 2-pixel (12″) circle
+  around WISE 0855's 2025–26 positions. It dominates the light below ~2 µm, and as WISE 0855
+  moves past it the D3 "light curve" changes (4.85×). WISE 0855's own light shows at
+  4–5 µm (~500–700 µJy, consistent with WISE W2 ≈ 14.0 mag ≈ 430 µJy). The UI should
+  warn when a catalogued star sits inside the circle (Phase 9).
+- **Epsilon Indi B spectrum** (46 clean points, 35 of 102 channels) shows the expected
+  T-dwarf shape: peak near 4 µm, methane dips near 2.2 and 3.3 µm.
+- **Same-object rule for click-to-identify.** A Gaia star is merged with the SIMBAD match
+  only if SIMBAD lists its Gaia DR3 id, or (when SIMBAD lists none, e.g. RW Aur) it is
+  within 1.5″ and moves the same way (within 30 mas/yr or 25%). This stops WISE 0855 being
+  paired with that G = 16.3 background star.
+- **Image lookup.** Images listed by `/api/observations` or `/api/frames` are remembered
+  (30 days) by `obs_id` + detector, so `/api/flags/{obs_id}` and `/api/meta/{obs_id}`
+  never fetch URLs supplied by a browser.
+
 ## Sources
 IRSA SIA (`https://irsa.ipac.caltech.edu/SIA`), IRSA cutouts (IBE), IRSA HiPS
 properties, CDS MocServer, npm registry/jsDelivr for Aladin Lite.

@@ -7,6 +7,7 @@ target was in each image.
 from astropy.time import Time
 
 from . import irsa
+from .cache import DAY, get_cache
 from .epochs import assign_visits, mjd_to_date, sample_evenly
 from .motion import has_motion, position_at, propagate
 
@@ -26,6 +27,23 @@ def deduplicate(rows: list[dict], priorities: dict[str, int]) -> list[dict]:
         if kept is None or priorities[row["release"]] < priorities[kept["release"]]:
             best[key] = row
     return list(best.values())
+
+
+def image_key(obs_id: str, detector: int) -> str:
+    return f"image:{obs_id}:D{detector}"
+
+
+def remember_images(rows: list[dict]) -> None:
+    """Keep each listed image's details, so /api/flags and /api/meta can find it by
+    obs_id + detector without a slow new search (and without trusting URLs from browsers)."""
+    cache = get_cache()
+    with cache.transact():
+        for row in rows:
+            cache.set(image_key(row["obs_id"], row["detector"]), row, expire=30 * DAY)
+
+
+def recall_image(obs_id: str, detector: int) -> dict | None:
+    return get_cache().get(image_key(obs_id, detector))
 
 
 def search_position(ra: float, dec: float, motion: dict | None) -> tuple[float, float]:
@@ -78,6 +96,7 @@ async def find_observations(
         row["t_mid_date"] = mjd_to_date(row["t_mid"])
         row["target_ra"] = round(float(row_ra), 7)
         row["target_dec"] = round(float(row_dec), 7)
+    remember_images(rows)
 
     return {
         "query": {

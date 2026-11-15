@@ -7,7 +7,6 @@ from astropy.io import fits
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from app import irsa
 from app.config import load_datasets
 from app.flags import exclusion_mask, flag_definitions
 from app.grid import make_grid, to_grid
@@ -109,15 +108,6 @@ def test_png_and_f32_are_north_up():
 def test_percent_stretch_ignores_nan():
     vmin, vmax = percent_stretch([np.array([np.nan, 0.0, 1.0, 2.0])], trim=100)
     assert (vmin, vmax) == (0.0, 2.0)
-
-
-@pytest.fixture
-def fake_cutouts(fake_irsa, monkeypatch):
-    """Every cutout request gets the real fixture cutout."""
-    async def fake_fetch(access_url, ra, dec, size_deg):
-        return fixture_bytes(CUTOUT)
-
-    monkeypatch.setattr(irsa, "fetch_cutout", fake_fetch)
 
 
 def stream_frames(body: dict) -> list[dict]:

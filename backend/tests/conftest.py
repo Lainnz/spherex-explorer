@@ -43,3 +43,12 @@ def fake_irsa(monkeypatch):
 
     monkeypatch.setattr(irsa, "fetch_sia", fake_fetch)
     return calls
+
+
+@pytest.fixture
+def fake_cutouts(fake_irsa, monkeypatch):
+    """Every cutout request gets the real fixture cutout (DR1 D3, 2025-08-15, no EPSF)."""
+    async def fake_fetch(access_url, ra, dec, size_deg):
+        return fixture_bytes("cutout_barnard_dr1_d3.fits")
+
+    monkeypatch.setattr(irsa, "fetch_cutout", fake_fetch)
