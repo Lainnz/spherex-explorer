@@ -313,6 +313,46 @@ Search radius 0.01° around each target's mid-2026 predicted position.
 - **Title page JS:** about 151 KB gzipped in total (budget 250 KB); three.js is in the
   lazily loaded scene chunk (142 KB gzipped).
 
+## 15. Phase 7: Aladin Lite 3.8.2
+- **The plan's script address is dead.** `https://aladin.cds.unistra.fr/AladinLite/api/v3/3.8.2/aladin.js`
+  (and `…/latest/…`) returned 404 on 2026-11-15. The npm package via jsDelivr works
+  (`https://cdn.jsdelivr.net/npm/aladin-lite@3.8.2/dist/aladin.js`, 2.4 MB, CORS `*`). It
+  is an **ES module** with one default export (`A`), loaded with `import()`. `A.init` is
+  a promise that rejects without WebGL 2.
+- **API checked in the 3.8.2 source** (`frontend/src/stellar/sky-view.js` is the only
+  caller): `A.aladin(div, options)`, `A.imageHiPS(idOrUrl, options)`, `A.MOCFromURL`,
+  `A.catalogFromVizieR(cat, target, radiusDeg, options)`, `A.catalog`, `A.source`,
+  `A.graphicOverlay`, `A.polygon`; `aladin.gotoRaDec / getRaDec / animateToRaDec(ra, dec,
+  seconds, done) / setFoV / getFov() → [width, height] in degrees / zoomToFoV(fov, seconds,
+  done) / setRotation / getRotation / pix2world / setBaseImageLayer / setOverlayImageLayer
+  / getOverlayImageLayer / removeImageLayer / addMOC / addOverlay / addCatalog`. Layers
+  have `show / hide / setOpacity`. **`aladin.on(event, fn)` keeps one callback per event**
+  (we fan out ourselves). Events: positionChanged ({ra, dec, dragging}), zoomChanged (fov),
+  rotationChanged (angle), click ({ra, dec, x, y, isDragging}), and others. There's no
+  `removeLayer` for catalogues (we hide them). `showGotoControl` isn't an option in 3.8.2.
+- **HiPS cube:** IRSA's cube `properties` include `em_min = 7.43e-7`, `em_max = 5.009e-6`,
+  `hips_cube_depth = 102`, `hips_cube_firstframe = 1`, `dataproduct_type = cube`, and per-
+  slice tiles (`Norder3/Dir0/Npix0_10.png` exists). Aladin's `setSliceNumber(n)` (0-based)
+  works once the layer is added. Its `obs_description` confirms "frame index =
+  17*(band-1) + (channel-1)" and blank frames 50 and 51. Coverage map:
+  `…/spherex_allsky_cube/Moc.fits` (CORS `*`).
+- CDS's `CDS/P/SPHEREx/QR2/color` record lists `hips_service_url = https://alasky.cds.unistra.fr/SPHEREx/color`
+  (`moc_sky_fraction = 0.9999`), although `…/SPHEREx/color/properties` returned 404 in
+  Phase 0. To check in the browser.
+- **Two Aladin quirks found with a headless Edge check (2026-11-15):**
+  (1) Aladin adds `.aladin-container { position: relative }` to the element it's given,
+  overriding our `position: absolute; inset: 0`. The box collapsed to height 0 and the sky
+  was black. Fix: Aladin gets an inner `#aladin` box (100% × 100%) inside the positioned
+  `#sky`. (2) `aladin.setRotation(0)` is refused ("Rotation angle is not valid: 0": it
+  treats 0 as "no value"); `aladin.view.setRotation(deg)` accepts any angle. Also,
+  Aladin's default survey (DSS via CDS) failed to load, so we pass `survey:` with our map.
+- **The cube is coarse:** order 5, 512-pixel tiles → 0.0036° ≈ 13″ per HiPS pixel, so at
+  a 5′ field of view you see blocky HEALPix "diamonds". Native-resolution SPHEREx frames
+  come from the time slider (Phase 8).
+- **Rotate tool:** a see-through layer over the sky catches drags (so Aladin doesn't pan)
+  and calls `setRotation`. The sign between dragging clockwise and Aladin's angle
+  (`ROTATION_SIGN` in nav-tools.js) needs the visual check.
+
 ## Sources
 IRSA SIA (`https://irsa.ipac.caltech.edu/SIA`), IRSA cutouts (IBE), IRSA HiPS
 properties, CDS MocServer, npm registry/jsDelivr for Aladin Lite.

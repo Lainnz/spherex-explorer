@@ -35,6 +35,24 @@ class IrsaUnavailable(Exception):
     """IRSA didn't answer, or answered with an error."""
 
 
+# Requests already on their way, per event loop: a second identical request (e.g. the
+# Stellar View asking for what the title page already started) joins the first instead of
+# starting another 3-minute search.
+_in_flight: "weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, dict]" = weakref.WeakKeyDictionary()
+
+
+async def _once(key: str, make):
+    """Run `make()` for `key` unless the same key is already running; share its result."""
+    running = _in_flight.setdefault(asyncio.get_running_loop(), {})
+    task = running.get(key)
+    if task is None:
+        task = asyncio.ensure_future(make())
+        running[key] = task
+        task.add_done_callback(lambda _: running.pop(key, None))
+    # shield: one caller giving up (e.g. a closed browser tab) doesn't cancel the others.
+    return await asyncio.shield(task)
+
+
 def _limit() -> asyncio.Semaphore:
     """Cap how many requests we send IRSA at once (be polite to a shared service)."""
     loop = asyncio.get_running_loop()
@@ -90,10 +108,14 @@ async def fetch_cutout(access_url: str, ra: float, dec: float, size_deg: float) 
     cache = get_cache()
     content = cache.get(key)
     if content is None:
-        content = await _get(access_url, {"center": center, "size": size})
-        if not content.startswith(b"SIMPLE"):
-            raise IrsaUnavailable("IRSA's cutout service didn't return a FITS file")
-        cache.set(key, content)
+        async def download() -> bytes:
+            data = await _get(access_url, {"center": center, "size": size})
+            if not data.startswith(b"SIMPLE"):
+                raise IrsaUnavailable("IRSA's cutout service didn't return a FITS file")
+            cache.set(key, data)
+            return data
+
+        content = await _once(key, download)
     return content
 
 
@@ -141,9 +163,12 @@ async def search_collection(
     cache = get_cache()
     rows = cache.get(key)
     if rows is None:
-        content = await fetch_sia(collection, ra, dec, radius_deg)
-        rows = parse_sia(content, release, survey)
-        cache.set(key, rows, expire=SEARCH_CACHE_SECONDS)
+        async def search() -> list[dict]:
+            found = parse_sia(await fetch_sia(collection, ra, dec, radius_deg), release, survey)
+            cache.set(key, found, expire=SEARCH_CACHE_SECONDS)
+            return found
+
+        rows = await _once(key, search)
     return rows
 
 

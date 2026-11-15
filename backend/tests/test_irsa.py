@@ -48,6 +48,27 @@ def test_request_limit_works_across_event_loops(monkeypatch):
     asyncio.run(busy())  # failed before: "bound to a different event loop"
 
 
+def test_identical_searches_at_the_same_time_share_one_irsa_request(monkeypatch):
+    calls = []
+
+    async def slow_fetch(collection, ra, dec, radius_deg):
+        calls.append(collection)
+        await asyncio.sleep(0.05)
+        return fixture_bytes("sia_barnard_spherex_dr1.xml")
+
+    monkeypatch.setattr(irsa, "fetch_sia", slow_fetch)
+
+    async def two_at_once():
+        return await asyncio.gather(
+            irsa.search_collection("spherex_dr1", "dr1", "wide", 269.452, 4.693, 0.01),
+            irsa.search_collection("spherex_dr1", "dr1", "wide", 269.452, 4.693, 0.01),
+        )
+
+    first, second = asyncio.run(two_at_once())
+    assert calls == ["spherex_dr1"]
+    assert first == second and len(first) == 31
+
+
 def test_search_uses_every_collection_once_then_cache(fake_irsa):
     releases = {
         "dr1": {"sia_collections": {"wide": "spherex_dr1", "deep": "spherex_dr1_deep"}},

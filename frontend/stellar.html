@@ -19,18 +19,123 @@
           <img src="/brand/logo-horizontal-white.png" alt="SPHEREx Xplorer" width="1600" height="534" />
         </picture>
       </a>
-      <span class="status" data-health>Checking the data server…</span>
+      <form id="header-search" class="header-search" role="search" autocomplete="off">
+        <label for="header-search-input" class="visually-hidden">Search a star or coordinates</label>
+        <input id="header-search-input" type="search" placeholder="Search a star or coordinates" spellcheck="false" />
+        <button type="submit" class="icon-button" data-icon="binoculars" aria-label="Explore"></button>
+        <button type="button" class="icon-button" data-icon="shuffle" id="header-random" aria-label="Randomize"></button>
+      </form>
+      <div class="header-actions">
+        <span class="badge" data-release title="SPHEREx data releases in use"></span>
+        <span class="badge" data-mode>…</span>
+        <button type="button" class="header-button" data-icon="link" id="copy-link">Copy link</button>
+        <button type="button" class="header-button" data-icon="code" id="embed-button">Embed</button>
+      </div>
     </header>
 
-    <main class="stellar-main">
-      <section class="panel placeholder">
-        <h1>Stellar View</h1>
-        <p>The sky viewer, time slider and data panels arrive in Phases 7–9.</p>
-        <p>This page already reads its address (URL). Here is what it understood:</p>
-        <dl class="url-readout mono" data-url-readout></dl>
-        <a class="btn" href="./">Back to the title page</a>
-      </section>
+    <main class="stellar">
+      <!-- Aladin restyles the element it's given (position: relative), so it gets an inner
+           box that fills this one. -->
+      <div class="sky" id="sky" aria-label="Sky view. Drag to rotate around the centre; use the toolbar to move and zoom.">
+        <div class="sky-inner" id="aladin"></div>
+      </div>
+      <p class="sky-message" data-sky-message hidden></p>
+      <div class="sky-loading" data-sky-loading role="status" aria-live="polite">Loading the sky…</div>
+
+      <!-- Embed mode only -->
+      <div class="embed-label" data-embed-label></div>
+      <a class="embed-open" data-open-full target="_blank" rel="noopener">Open in SPHEREx Xplorer ↗</a>
+
+      <aside class="panel control-panel" aria-label="Controls">
+        <button type="button" class="panel-toggle" aria-expanded="true" aria-controls="control-body">Controls</button>
+        <div id="control-body" class="panel-body">
+          <h2 class="target-name" data-target-name>Loading…</h2>
+          <dl class="coordinate mono">
+            <dt>RA</dt><dd data-ra>–</dd>
+            <dt>Dec</dt><dd data-dec>–</dd>
+          </dl>
+          <p class="sexagesimal mono" data-sexagesimal></p>
+
+          <label class="field">
+            <span>Field of view <button type="button" class="help" data-help="How wide a patch of sky you see. Bigger shows more and lets you follow faster movers, but downloads more data.">?</button></span>
+            <span class="fov-row">
+              <input id="fov-input" type="number" min="0.001" step="any" inputmode="decimal" />
+              <select id="fov-unit" aria-label="Field of view unit">
+                <option value="s">″ arcsec</option>
+                <option value="m">′ arcmin</option>
+                <option value="d">° degrees</option>
+              </select>
+            </span>
+            <small class="note" data-fov-note></small>
+          </label>
+
+          <p class="data-status" data-observations role="status" aria-live="polite"></p>
+          <p class="coming mono">Display controls and the image sequence arrive in Phase 8.</p>
+
+          <details class="about">
+            <summary>About this view</summary>
+            <p>
+              You're looking out from the centre of the Earth with north (the celestial pole) up, like
+              Stellarium without the ground. The background is the SPHEREx all-sky map; outlines show
+              individual SPHEREx images of this spot.
+            </p>
+            <p>Sky viewer: Aladin Lite (CDS, Strasbourg). Data: NASA SPHEREx via IRSA, ESA Gaia, NASA WISE, 2MASS.</p>
+          </details>
+        </div>
+      </aside>
+
+      <div class="toolbar" role="toolbar" aria-label="Navigation" data-toolbar></div>
+      <div class="moved-chip" data-moved-chip hidden>
+        <span data-moved></span>
+        <button type="button">Go back</button>
+      </div>
+
+      <aside class="panel drawer" aria-label="Details">
+        <div class="tabs" role="tablist">
+          <button role="tab" aria-selected="true" aria-controls="tab-layers" id="tab-layers-button">Layers</button>
+          <button role="tab" aria-selected="false" disabled title="Phase 9">Info</button>
+          <button role="tab" aria-selected="false" disabled title="Phase 9">Flags</button>
+          <button role="tab" aria-selected="false" disabled title="Phase 9">Spectrum</button>
+          <button role="tab" aria-selected="false" disabled title="Phase 9">Light curve</button>
+        </div>
+        <section id="tab-layers" role="tabpanel" aria-labelledby="tab-layers-button" class="tab-body">
+          <label class="field">
+            <span>Sky map <button type="button" class="help" data-help="The picture of the whole sky behind everything. The SPHEREx map comes in 102 infrared colours.">?</button></span>
+            <select id="base-map"></select>
+          </label>
+          <label class="field" data-wavelength-row>
+            <span>Wavelength <button type="button" class="help" data-help="Which of SPHEREx's 102 infrared colours to show. Longer wavelengths see cooler things and through more dust.">?</button></span>
+            <input id="wavelength" type="range" min="0" max="101" step="1" />
+            <small class="mono" data-wavelength></small>
+          </label>
+          <label class="field">
+            <span>Overlay <button type="button" class="help" data-help="A second sky map on top of the first. Use the slider to see through it.">?</button></span>
+            <select id="overlay-map"><option value="">None</option></select>
+            <input id="overlay-opacity" type="range" min="0" max="1" step="0.05" aria-label="Overlay see-through" />
+          </label>
+          <fieldset class="field toggles">
+            <legend>Show</legend>
+            <label><input type="checkbox" id="show-footprints" checked /> SPHEREx image outlines</label>
+            <label><input type="checkbox" id="show-coverage" /> SPHEREx coverage (DR1)</label>
+            <label><input type="checkbox" id="show-gaia" /> Gaia DR3 stars</label>
+            <label><input type="checkbox" id="show-allwise" /> AllWISE sources</label>
+          </fieldset>
+          <p class="note">
+            <strong>SPHEREx</strong> (NASA) maps the sky in 102 infrared colours. <strong>Gaia</strong> (ESA)
+            measures star positions, distances and motions. <strong>WISE</strong> (NASA) mapped the infrared
+            sky from 2010. <strong>2MASS</strong> is a near-infrared sky survey.
+          </p>
+        </section>
+      </aside>
+
+      <footer class="time-bar" aria-label="Time">
+        <span class="time-label">Time slider</span>
+        <span class="note">Play / stop, speed and the SPHEREx image sequence arrive in Phase 8.</span>
+        <span class="badge" data-mode-embed></span>
+      </footer>
     </main>
-    <footer class="site-footer" data-footer></footer>
+
+    <div class="toasts" aria-live="polite" data-toasts></div>
+    <div class="help-bubble" role="tooltip" data-help-bubble hidden></div>
   </body>
 </html>

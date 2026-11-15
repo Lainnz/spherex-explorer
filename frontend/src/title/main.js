@@ -13,8 +13,14 @@ import { parseFov } from '../shared/fov.js';
 import { featuredTargets } from '../shared/targets.js';
 import { renderFooter } from '../shared/ui.js';
 import { buildStellarUrl } from '../shared/url-state.js';
+import { prepareStellarView, withTimeout } from './prefetch.js';
 import { randomDestination } from './randomize.js';
 import { resolveQuery } from './search.js';
+
+// How long to wait for the 3D scene after a search before going without the animation.
+const SCENE_WAIT_MS = 12_000;
+// After the animation, how long to keep "Loading the sky…" up while downloads finish.
+const PREPARE_WAIT_MS = 8_000;
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const showFps = import.meta.env.DEV || new URLSearchParams(window.location.search).has('fps');
@@ -25,11 +31,12 @@ const message = document.querySelector('#search-message');
 const randomButton = document.querySelector('#random-button');
 const canvas = document.querySelector('#scene');
 const veil = document.querySelector('.veil');
+const veilMessage = document.querySelector('.veil-message');
 const fpsOutput = document.querySelector('#fps');
 const healthLabel = document.querySelector('[data-health]');
 
 let live = false; // is the data server awake?
-let scene = null; // the 3D scene, once loaded
+let scenePromise = null; // resolves to the 3D scene, or null if it can't run
 let busy = false;
 
 // --- Icons (Lucide, ISC licence) -------------------------------------------------------
@@ -97,19 +104,51 @@ function setBusy(value) {
   for (const button of form.querySelectorAll('button')) button.disabled = value;
 }
 
-function go(destination) {
-  const url = buildStellarUrl({ ...destination, ...advancedOptions(destination.fov) });
-  showMessage(`Flying to ${destination.name}…`);
-  if (!scene) {
+/**
+ * Play the fly-away, getting the Stellar View ready meanwhile, then open it.
+ * If the 3D scene is still loading, wait for it (with a message) so the animation plays.
+ */
+async function go(destination) {
+  const options = advancedOptions(destination.fov);
+  const url = buildStellarUrl({ ...destination, ...options });
+  const preparing = prepareStellarView(destination, { live, fov: options.fov });
+
+  const scene = await withTimeout(sceneReady(), 200);
+  const ready = scene ?? (await (async () => {
+    showMessage('Preparing the fly-through…');
+    return withTimeout(sceneReady(), SCENE_WAIT_MS);
+  })());
+
+  if (!ready) {
+    // No 3D (old browser, no WebGL) or too slow: go straight there.
+    showMessage(`Opening ${destination.name}…`);
+    await withTimeout(preparing, PREPARE_WAIT_MS);
     window.location.assign(url);
     return;
   }
+
+  showMessage(`Flying to ${destination.name}…`);
+  // Listen for "skip" only after the click that started this has finished, or that
+  // same click would count as a skip (the bug where the animation never played).
   const skip = (event) => {
-    if (event.type === 'click' || event.key === 'Escape') scene.skip();
+    if (event.type === 'click' || event.key === 'Escape') ready.skip();
   };
-  window.addEventListener('click', skip);
-  window.addEventListener('keydown', skip);
-  scene.flyTo(destination, () => window.location.assign(url));
+  setTimeout(() => {
+    window.addEventListener('click', skip);
+    window.addEventListener('keydown', skip);
+  }, 0);
+
+  ready.flyTo(destination, async () => {
+    window.removeEventListener('click', skip);
+    window.removeEventListener('keydown', skip);
+    // The screen is dark now. If the Stellar View isn't ready yet, say so while it finishes.
+    const done = await withTimeout(preparing.then(() => true), 300, false);
+    if (!done) {
+      veilMessage.textContent = 'Loading the sky…';
+      await withTimeout(preparing, PREPARE_WAIT_MS);
+    }
+    window.location.assign(url);
+  });
 }
 
 form.addEventListener('submit', async (event) => {
@@ -158,21 +197,28 @@ getHealth().then((health) => {
     : 'Demo mode · saved data for the featured targets';
 });
 
-// --- 3D scene (loaded in the background) --------------------------------------------------
+// --- 3D scene (starts loading straight away, after the first paint) -------------------------
 if (showFps) fpsOutput.hidden = false;
 
 async function loadScene() {
   try {
     const { startScene } = await import('./scene.js');
-    scene = await startScene(canvas, {
+    const scene = await startScene(canvas, {
       reducedMotion,
       onFps: showFps ? (fps) => { fpsOutput.value = `${fps} fps`; } : undefined,
       onFade: (opacity) => { veil.style.opacity = String(opacity); },
     });
     canvas.classList.add('is-ready');
+    return scene;
   } catch (error) {
     // No WebGL or a loading problem: the page still works with the plain starry background.
     console.warn('3D scene unavailable:', error);
+    return null;
   }
 }
-(window.requestIdleCallback ?? ((fn) => setTimeout(fn, 200)))(loadScene);
+/** The scene, starting to load it if that hasn't begun yet. */
+function sceneReady() {
+  scenePromise ??= loadScene();
+  return scenePromise;
+}
+requestAnimationFrame(sceneReady);

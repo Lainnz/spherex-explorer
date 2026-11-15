@@ -5,6 +5,11 @@
   box-sizing: border-box;
 }
 
+/* The hidden attribute always wins, even over components that set their own display. */
+[hidden] {
+  display: none !important;
+}
+
 html {
   color-scheme: dark;
 }
