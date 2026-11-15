@@ -10,6 +10,10 @@ export default defineConfig({
     fs: { allow: ['..'] },
   },
   build: {
+    // three.js makes the title page's 3D chunk ~560 KB before compression (~140 KB gzipped).
+    // It's already split off and loaded in the background; the budget (PLAN.md §9.1) is
+    // ≤ 250 KB gzipped for the whole title page.
+    chunkSizeWarningLimit: 650,
     // Two separate pages: the title page and the Stellar View.
     rollupOptions: {
       input: {

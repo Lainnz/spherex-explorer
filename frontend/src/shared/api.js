@@ -5,6 +5,44 @@
  */
 export const API_BASE = (import.meta.env.VITE_API_BASE || 'http://localhost:8000').replace(/\/$/, '');
 
+/** An error with a message that's safe to show to people as-is. */
+export class FriendlyError extends Error {
+  constructor(message, { code, status } = {}) {
+    super(message);
+    this.code = code;
+    this.status = status;
+  }
+}
+
+/**
+ * GET a JSON answer from the backend. Throws FriendlyError with the server's own
+ * plain-language message when there is one.
+ * @param {string} path e.g. "/api/resolve"
+ * @param {Record<string, string|number>} [params]
+ * @param {{timeoutMs?: number}} [options]
+ */
+export async function getJson(path, params = {}, { timeoutMs = 20000 } = {}) {
+  const query = new URLSearchParams(params).toString();
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}${query ? `?${query}` : ''}`, {
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch {
+    throw new FriendlyError("The data server isn't answering. It may be waking up; try again in a minute.", {
+      code: 'offline',
+    });
+  }
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new FriendlyError(body.message || 'Something went wrong on the data server.', {
+      code: body.error,
+      status: response.status,
+    });
+  }
+  return body;
+}
+
 /**
  * Ask the backend if it's awake. Free servers sleep, so give up after a few
  * seconds and let the page fall back to demo mode (PLAN.md §8.6).

@@ -300,6 +300,19 @@ Search radius 0.01° around each target's mid-2026 predicted position.
   retries a target if more than 10% of its images fail. (The live server uses one event
   loop, so it wasn't affected.)
 
+## 14. Phase 6: title page assets
+- **NASA Earth images moved.** `eoimages.gsfc.nasa.gov` timed out (2026-11-14), and Visible
+  Earth pages redirect to science.nasa.gov. Working files are on `assets.science.nasa.gov`
+  (exact paths in `scripts/build_textures.py` and `docs/CREDITS.md`). Textures: desktop set
+  770 KB (budget 1.5 MB), phone set 227 KB (budget 500 KB), WebP quality 85.
+- **Starfield:** Gaia DR3 has 36,663 sources with G < 7.5; the brightest 28,000 are used
+  (to G = 7.25). Gaia lacks some of the brightest stars (150 with G < 3 vs SIMBAD's 177
+  with V < 3), so 65 stars with V < 3.5 come from SIMBAD. Star types only: SIMBAD's
+  "Aquarius IV" dwarf galaxy has V = −1.9 (a total magnitude). Duplicates within 60″ are
+  merged (alf Cen vs alf Cen A). 219 KB (budget 300 KB).
+- **Title page JS:** about 151 KB gzipped in total (budget 250 KB); three.js is in the
+  lazily loaded scene chunk (142 KB gzipped).
+
 ## Sources
 IRSA SIA (`https://irsa.ipac.caltech.edu/SIA`), IRSA cutouts (IBE), IRSA HiPS
 properties, CDS MocServer, npm registry/jsDelivr for Aladin Lite.
