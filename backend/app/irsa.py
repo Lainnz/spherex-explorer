@@ -8,6 +8,7 @@ Facts this relies on were checked live on 2026-11-14 (docs/DATA_NOTES.md):
 import asyncio
 import io
 import re
+import weakref
 
 import httpx
 from astropy.io.votable import parse
@@ -23,7 +24,11 @@ RETRIES = 3
 # New QR3 data arrives weekly, so search results are only kept for 6 hours.
 SEARCH_CACHE_SECONDS = 6 * HOUR
 
-_semaphore: asyncio.Semaphore | None = None
+# One limiter per event loop. A semaphore belongs to the loop that first waits on it, and
+# scripts and tests run each request in a fresh loop. A single shared semaphore made those
+# requests fail with "bound to a different event loop" (found 2026-11-14 while building
+# demo data, where it had looked like IRSA failures).
+_semaphores: "weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, asyncio.Semaphore]" = weakref.WeakKeyDictionary()
 
 
 class IrsaUnavailable(Exception):
@@ -32,10 +37,10 @@ class IrsaUnavailable(Exception):
 
 def _limit() -> asyncio.Semaphore:
     """Cap how many requests we send IRSA at once (be polite to a shared service)."""
-    global _semaphore
-    if _semaphore is None:
-        _semaphore = asyncio.Semaphore(settings.irsa_concurrency)
-    return _semaphore
+    loop = asyncio.get_running_loop()
+    if loop not in _semaphores:
+        _semaphores[loop] = asyncio.Semaphore(settings.irsa_concurrency)
+    return _semaphores[loop]
 
 
 async def _get(url: str, params: dict) -> bytes:

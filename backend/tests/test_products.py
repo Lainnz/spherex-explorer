@@ -145,6 +145,32 @@ def test_frames_stream_and_products(fake_cutouts):
     assert [m["frame_id"] for m in again if m["type"] == "frame"] == ids
 
 
+def test_failed_images_are_reported_and_retried(fake_irsa, monkeypatch):
+    from app import irsa
+
+    calls = {"n": 0}
+
+    async def flaky_fetch(access_url, ra, dec, size_deg):
+        calls["n"] += 1
+        if calls["n"] % 2 == 0:
+            raise irsa.IrsaUnavailable("IRSA answered HTTP 502")
+        return fixture_bytes(CUTOUT)
+
+    monkeypatch.setattr(irsa, "fetch_cutout", flaky_fetch)
+    body = {"ra": 269.452, "dec": 4.693, "fov_arcsec": 300, "detectors": [3]}
+    first = stream_frames(body)
+    assert first[-1]["images_failed"] > 0
+    assert "IrsaUnavailable: IRSA answered HTTP 502" in first[-1]["failure_reasons"]
+
+    async def good_fetch(access_url, ra, dec, size_deg):
+        return fixture_bytes(CUTOUT)
+
+    monkeypatch.setattr(irsa, "fetch_cutout", good_fetch)
+    second = stream_frames(body)
+    # Incomplete frames weren't saved as complete ones, so they're rebuilt with every image.
+    assert second[0]["images_to_download"] > 0 and second[-1]["images_failed"] == 0
+
+
 def test_white_and_exposure_modes(fake_cutouts):
     white = [m for m in stream_frames({"ra": 269.452, "dec": 4.693, "fov_arcsec": 300, "mode": "white"})
              if m["type"] == "frame"]

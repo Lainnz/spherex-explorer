@@ -33,6 +33,21 @@ def test_parse_error_answer_raises():
         irsa.parse_sia(text.encode(), "dr1", "wide")
 
 
+def test_request_limit_works_across_event_loops(monkeypatch):
+    """Scripts and tests run each request in a new event loop; the limiter must cope,
+    even when requests have to wait their turn."""
+    monkeypatch.setattr(irsa.settings, "irsa_concurrency", 1)
+
+    async def busy():
+        async def one():
+            async with irsa._limit():
+                await asyncio.sleep(0.01)
+        await asyncio.gather(*(one() for _ in range(3)))
+
+    asyncio.run(busy())
+    asyncio.run(busy())  # failed before: "bound to a different event loop"
+
+
 def test_search_uses_every_collection_once_then_cache(fake_irsa):
     releases = {
         "dr1": {"sia_collections": {"wide": "spherex_dr1", "deep": "spherex_dr1_deep"}},

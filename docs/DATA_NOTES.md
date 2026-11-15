@@ -280,6 +280,26 @@ Search radius 0.01° around each target's mid-2026 predicted position.
   (30 days) by `obs_id` + detector, so `/api/flags/{obs_id}` and `/api/meta/{obs_id}`
   never fetch URLs supplied by a browser.
 
+## 13. Phase 5: demo data
+- `scripts/build_demo_data.py` calls the real API in-process (FastAPI TestClient) and
+  saves its answers unchanged in `frontend/public/data/demo/<slug>/manifest.json`, so demo
+  data has exactly the live shape. Contents: `observations`, `frames_stream` and
+  `photometry_stream` (every NDJSON message, ready to replay), `flags` and `meta` for one
+  image, and `objects` (the target's click answer). Picture links are rewritten to saved
+  files: `frames/<id>.png|.f32|.fits` and `flags/<FLAG>.png`.
+- Built 2026-11-14: **3.99 MB total** (budget 25 MB). Frames: Barnard's Star 12, Epsilon
+  Indi B 15, WISE 0855 8, RW Aurigae 9, R Draconis 21; 0 failed images; 41–60
+  photometry points each. Checked by `frontend/src/shared/demo-data.test.js`.
+- **Bug found while building: it wasn't IRSA.** The first build lost 75 of 80 Epsilon Indi B
+  images. Their failures had been silently swallowed, so it looked like an IRSA outage.
+  The real cause: the IRSA request limiter (an `asyncio.Semaphore`) was shared by every
+  event loop, and the build script runs each request in a new loop. Once a request had
+  to wait its turn → "bound to a different event loop". Fixed with one limiter per loop.
+  Also: frames now report `failure_reasons` and log every skipped image; incomplete
+  frames are saved under their own id so the complete frame is retried; the build
+  retries a target if more than 10% of its images fail. (The live server uses one event
+  loop, so it wasn't affected.)
+
 ## Sources
 IRSA SIA (`https://irsa.ipac.caltech.edu/SIA`), IRSA cutouts (IBE), IRSA HiPS
 properties, CDS MocServer, npm registry/jsDelivr for Aladin Lite.

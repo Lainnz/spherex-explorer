@@ -9,6 +9,8 @@ Frames are sent one by one as soon as they're ready (NDJSON: one JSON object per
 so the website can show progress instead of waiting for everything.
 """
 import asyncio
+import logging
+from collections import Counter
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 
@@ -23,6 +25,7 @@ from .products import ivw_mean, load_product, product_exists, product_id, save_p
 from .render import percent_stretch
 
 MODES = ("epoch", "white", "exposure")
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -180,6 +183,8 @@ async def frame_stream(
         "visits": visits,
     }
 
+    failure_reasons: Counter = Counter()
+
     async def load(row: dict) -> GridImage | None:
         try:
             content = await irsa.fetch_cutout(row["access_url"], center_ra, center_dec, size_deg)
@@ -187,7 +192,10 @@ async def frame_stream(
                 to_grid, content, grid, row["target_ra"], row["target_dec"], options.exclude_flags,
                 options.zodi_subtract, options.background_subtract,
             )
-        except Exception:  # one bad or missing image shouldn't stop the whole sequence
+        except Exception as error:  # one bad or missing image shouldn't stop the whole sequence
+            reason = f"{type(error).__name__}: {str(error)[:120]}"
+            failure_reasons[reason] += 1
+            log.warning("Skipped %s D%s: %s", row["obs_id"], row["detector"], reason)
             return None
 
     # Start every download now, in time order; the IRSA limit keeps only a few running.
@@ -205,6 +213,9 @@ async def frame_stream(
                            "skipped": group.label, "reason": "no usable images"}
                     continue
                 used = FrameGroup(group.key, [row for row, _ in good], group.label, group.stretch_key)
+                if len(good) < len(group.rows):
+                    # Incomplete: save under its own id, so the complete frame is retried next time.
+                    pid = product_id(frame_recipe(used, grid, options))
                 image, variance, unit, filled = combine(used, [img for _, img in good], options)
                 wavelengths = [img.wavelength_um for _, img in good if img.wavelength_um is not None]
                 meta = {
@@ -239,4 +250,5 @@ async def frame_stream(
             for task in group_tasks:
                 task.cancel()  # the browser went away: stop downloading
 
-    yield {"type": "done", "frames_total": len(groups), "images_failed": failed}
+    yield {"type": "done", "frames_total": len(groups), "images_failed": failed,
+           "failure_reasons": dict(failure_reasons)}

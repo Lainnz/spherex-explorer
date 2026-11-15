@@ -32,6 +32,13 @@ Check it at http://localhost:8000/api/health
 
 **Tests:** `npm test` (in `frontend`) and `python -m pytest` (in `backend`).
 
+**Demo data** (saved results for the five featured targets, used when the data server is
+asleep) lives in `frontend/public/data/demo/`. To refresh it from NASA's archive (with the
+`.venv` turned on, from the project folder):
+```
+python scripts\build_demo_data.py
+```
+
 ## Project layout
 | Folder | What's inside |
 |---|---|
