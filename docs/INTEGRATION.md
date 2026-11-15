@@ -50,6 +50,18 @@ branch.
    "signs of pre-life") from a curated list of published targets, with a live SPHEREx
    check of band depth; "Why SPHEREx Xplorer" (data visualised, extra information,
    search by filters); polish and full test run.
+4. **Life-ingredient filters, Earth comparison, favourites:**
+   - Filter on the Explore page: find places by ingredients life needs, with numbers.
+     *SPHEREx ice clouds:* ice amounts as published (e.g. CO₂ or CO as a % of water ice,
+     water-ice column), plus organics (PAH, aliphatic carbon). *Planets:* NASA Exoplanet
+     Archive values (radius, mass, temperature, sunlight received, in the habitable zone),
+     with water / atmosphere detections only where a paper reports them.
+   - Planet profile comparing each planet with Earth: similarities, differences and an
+     Earth Similarity Index (formula shown). Every number names its source; nothing is
+     guessed.
+   - Add a planet or place to **favourites** and come back to it later (saved on this
+     device, building on Alice's favourites list), with what changed since the last visit
+     where the data allows.
 
 ## Honesty rules carried over from both demos
 - Never fabricate data. Decorative visuals are labelled as such.
