@@ -76,12 +76,16 @@ const ATMOSPHERE_VERTEX = /* glsl */ `
 const ATMOSPHERE_FRAGMENT = /* glsl */ `
   uniform vec3 uSunDir;
   uniform vec3 uColor;
+  uniform float uLimb;
   varying vec3 vNormalW;
   varying vec3 vToCamera;
   void main() {
-    float rim = pow(clamp(1.0 + dot(vNormalW, vToCamera), 0.0, 1.0), 2.5);
-    float sunSide = 0.25 + 0.75 * smoothstep(-0.4, 0.6, dot(-vNormalW, uSunDir));
-    gl_FragColor = vec4(uColor * rim * sunSide * 1.6, 1.0);
+    // x: 0 behind the globe's centre, uLimb at Earth's edge, 1 at the shell's outer edge.
+    float x = clamp(1.0 + dot(vNormalW, vToCamera), 0.0, 1.0);
+    // Brightest hugging the planet, fading smoothly to nothing at the shell's edge.
+    float halo = pow(1.0 - smoothstep(uLimb, 1.0, x), 1.6);
+    float sunSide = 0.45 + 0.55 * smoothstep(-0.4, 0.6, dot(-vNormalW, uSunDir));
+    gl_FragColor = vec4(uColor * halo * sunSide * 2.4, 1.0);
   }
 `;
 
@@ -125,10 +129,16 @@ export function createEarth({ radius = 1, segments = 64, sunDirection }) {
   });
   const clouds = new Mesh(new SphereGeometry(radius * 1.008, segments, segments), cloudMaterial);
 
+  // A wide halo around the globe. uLimb: where Earth's edge falls on the shell (seen from far away).
+  const atmosphereScale = 1.12;
   const atmosphere = new Mesh(
-    new SphereGeometry(radius * 1.035, segments, segments),
+    new SphereGeometry(radius * atmosphereScale, segments, segments),
     new ShaderMaterial({
-      uniforms: { uSunDir: sun, uColor: { value: new Vector3(0.3, 0.6, 1.0) } },
+      uniforms: {
+        uSunDir: sun,
+        uColor: { value: new Vector3(0.35, 0.65, 1.0) },
+        uLimb: { value: 1 - Math.sqrt(1 - 1 / atmosphereScale ** 2) },
+      },
       vertexShader: ATMOSPHERE_VERTEX,
       fragmentShader: ATMOSPHERE_FRAGMENT,
       side: BackSide,
