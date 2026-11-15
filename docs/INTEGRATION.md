@@ -50,10 +50,13 @@ Milestone 2; it's still on the `elaine-demo` branch.
    and quality numbers after a visit-minus-visit Difference (`/api/significance`); spectral
    feature markers, points table and limits in the Spectrum tab; "match the sky map to the
    frame's colour"; Guide tab. `claude-demo/` removed.
-3. **New features:** search by chemistry (water ice, CO₂, CO, carbon/PAH, organics,
-   "signs of pre-life") from a curated list of published targets, with a live SPHEREx
-   check of band depth; "Why SPHEREx Xplorer" (data visualised, extra information,
-   search by filters); polish and full test run.
+3. **New features** (done): Chemistry tab on the Explore page. Pick ingredients (water,
+   CO₂, CO and methanol ice; PAH and chain-like organics) or "signs of pre-life chemistry"
+   to list places from `config/chemistry.json` (12 places, each with its paper; SPHEREx's own
+   Cygnus X results first), fly to one, and "check this spot with SPHEREx" (band depths
+   τ = ln(continuum / band) from the live spectrum, ≥ 3σ = seen). Both search boxes accept
+   ingredient words ("water ice", "carbon", "pre-life"). "Why use SPHEREx Xplorer" in the
+   Guide tab and README.
 4. **Life-ingredient filters, Earth comparison, favourites:**
    - Filter on the Explore page: find places by ingredients life needs, with numbers.
      *SPHEREx ice clouds:* ice amounts as published (e.g. CO₂ or CO as a % of water ice,

@@ -34,6 +34,7 @@ import { setupOperations } from './operations.js';
 import { setupPhotometry } from './photometry-panel.js';
 import { setupTabs } from './tabs.js';
 import { setupTargetReadout } from './target-readout.js';
+import { setupChemistryPanel } from './chemistry-panel.js';
 import { createSequence } from './sequence.js';
 import { createSkyView, NO_SERVER_MAP, SKY_MAPS } from './sky-view.js';
 import { setupTimeBar } from './time-bar.js';
@@ -507,6 +508,10 @@ async function main() {
       photometry.refresh();
     },
   });
+  setupChemistryPanel({
+    root: $('#tab-chemistry'), state, home, live, photometry, subject: targetSubject, onChange: writeUrl, toast,
+  });
+  if (state.find) tabs.open('tab-chemistry');
   setupInfoPanel({ root: $('#tab-info'), sequence: images.sequence, state, live, getDemo });
   setupFlagsPanel({
     root: $('#tab-flags'), sequence: images.sequence, overlay: images.overlay, state, live, getDemo,

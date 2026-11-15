@@ -11,6 +11,15 @@ changing objects stand out. Built for the NASA Space Apps "SPHEREx Open Data" ch
 > [docs/DATA_NOTES.md](docs/DATA_NOTES.md) for what we learned about the data, and
 > [docs/INTEGRATION.md](docs/INTEGRATION.md) for how Elaine's and Alice's demos are combined.
 
+## Why use SPHEREx Xplorer
+- **The data, visualised:** SPHEREx's 102-colour infrared sky in false colour, images that
+  play over time, spectra and light curves as charts, all live from NASA IRSA.
+- **Extra information:** click any star for its type, distance and motion (SIMBAD, Gaia,
+  AllWISE); a "?" help bubble on every control and a built-in guide.
+- **Search by filters:** find places with water ice, CO₂, CO, methanol or carbon molecules,
+  or "signs of pre-life chemistry", from a cited list (`config/chemistry.json`), and check
+  any spot's ice and carbon features live with SPHEREx. Try typing *water ice* in the search.
+
 ## Run it on your computer (Windows 11, PowerShell)
 You need Node.js, Python 3.12 and Git (see PLAN.md, Part 1).
 
@@ -47,6 +56,7 @@ python scripts\build_demo_data.py
 | `backend/` | The data server (Python, FastAPI, Astropy) |
 | `backend/app/skytools/` | Elaine's sky tools: SPHEREx false-colour map, timelines, comparisons, spectra, catalogue overlays |
 | `config/datasets.json` | Which SPHEREx releases and sky maps to use (one file to update) |
+| `config/chemistry.json` | The chemistry search's places, ingredients and sources (every entry cites its paper) |
 | `brand/` | Team logos (originals; web copies are made by `scripts/build_brand.py`) |
 | `docs/` | Notes on the data, deployment and updates |
 | `scripts/` | Helper scripts (logos, demo data, release checks) |

@@ -913,3 +913,82 @@ select optgroup {
 .guide-goals { margin: 0.4rem 0; padding-left: 1.1rem; font-size: 0.85rem; line-height: 1.45; }
 .guide .table-scroll td { text-align: left; vertical-align: top; }
 .guide .table-scroll th { text-align: left; }
+
+/* --- Milestone 3: Chemistry tab ------------------------------------------------------ */
+.ingredient-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.4rem 0;
+}
+.ingredient-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.ingredient-chip:has(input:checked) {
+  border-color: var(--teal-hover);
+  background: rgb(0 151 157 / 0.25);
+}
+.ingredient-chip input { margin: 0; }
+.ingredient-chip.kind-ice { box-shadow: inset 3px 0 0 #56b4e9; }
+.ingredient-chip.kind-organic { box-shadow: inset 3px 0 0 #e69f00; }
+[data-preset][aria-pressed='true'] {
+  border-color: var(--teal-hover);
+  background: rgb(0 151 157 / 0.35);
+}
+.chem-list {
+  list-style: none;
+  margin: 0.4rem 0 0.8rem;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.chem-item {
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  background: rgb(5 10 24 / 0.45);
+}
+.chem-item header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: baseline;
+}
+.chem-item h4 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--white);
+}
+.chem-item p { margin: 0.25rem 0; }
+.chem-summary { font-size: 0.82rem; line-height: 1.4; }
+.chem-item a { color: var(--teal-hover); }
+.ingredient-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0.3rem 0;
+}
+.ingredient-tag {
+  padding: 0.05rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  color: var(--night-sky);
+}
+.ingredient-tag.kind-ice { background: #56b4e9; }
+.ingredient-tag.kind-organic { background: #e69f00; }
+.ingredient-tag.is-wanted { outline: 2px solid var(--white); }
+.chem-live {
+  width: 100%;
+  margin: 0.4rem 0;
+  border-collapse: collapse;
+}
+.chem-live th { text-align: left; font-weight: 500; padding-right: 0.5rem; white-space: nowrap; }
+.chem-live td { padding: 0.2rem 0.3rem; vertical-align: top; }
+.chem-live tr + tr > * { border-top: 1px solid rgb(30 50 86 / 0.6); }

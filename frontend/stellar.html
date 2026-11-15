@@ -20,8 +20,8 @@
         </picture>
       </a>
       <form id="header-search" class="header-search" role="search" autocomplete="off">
-        <label for="header-search-input" class="visually-hidden">Search a star or coordinates</label>
-        <input id="header-search-input" type="search" placeholder="Search a star or coordinates" spellcheck="false" />
+        <label for="header-search-input" class="visually-hidden">Search a star, coordinates or an ingredient such as water ice</label>
+        <input id="header-search-input" type="search" placeholder="Search a star, coordinates or an ingredient (water ice…)" spellcheck="false" />
         <button type="submit" class="icon-button" data-icon="binoculars" aria-label="Explore"></button>
         <button type="button" class="icon-button" data-icon="shuffle" id="header-random" aria-label="Randomize"></button>
       </form>
@@ -209,6 +209,7 @@
           <button role="tab" aria-selected="false" aria-controls="tab-flags" id="tab-flags-button">Flags</button>
           <button role="tab" aria-selected="false" aria-controls="tab-spectrum" id="tab-spectrum-button">Spectrum</button>
           <button role="tab" aria-selected="false" aria-controls="tab-curve" id="tab-curve-button">Light curve</button>
+          <button role="tab" aria-selected="false" aria-controls="tab-chemistry" id="tab-chemistry-button">Chemistry</button>
           <button role="tab" aria-selected="false" aria-controls="tab-guide" id="tab-guide-button">Guide</button>
         </div>
 
@@ -290,7 +291,35 @@
             <button type="button" class="help" data-help="For stars too bright for SPHEREx (their centre overflows), this measures the glow around them instead. It shows how the brightness changes (2 = twice as bright as usual), not the exact brightness.">?</button></label>
           <button type="button" class="small-button" data-csv>Download CSV</button>
         </section>
+        <section id="tab-chemistry" role="tabpanel" aria-labelledby="tab-chemistry-button" class="tab-body chemistry" hidden>
+          <h3 class="panel-heading">Find the ingredients of life <button type="button" class="help" data-help="Ices and carbon molecules frozen on dust in cold clouds are the raw materials new planets inherit. Pick ingredients to list places where telescopes (including SPHEREx) have detected them. Numbers like '18% of water ice' are from the paper listed with each place.">?</button></h3>
+          <div class="ingredient-chips" data-ingredients role="group" aria-label="Ingredients"></div>
+          <div class="button-row">
+            <button type="button" class="small-button" data-preset="prelife" aria-pressed="false">Signs of pre-life chemistry</button>
+            <label class="toggles"><input type="checkbox" id="match-any" /> Any of them (not all)</label>
+          </div>
+          <p class="note small" data-chem-count role="status" aria-live="polite"></p>
+          <ul class="chem-list" data-chem-results></ul>
+          <h3 class="panel-heading">Check this spot with SPHEREx <button type="button" class="help" data-help="Measures this spot in every SPHEREx image (the same measurements as the Spectrum tab), then how deep the water, CO₂ and CO ice dips are and how strong the 3.3 µm carbon (PAH) glow is.">?</button></h3>
+          <button type="button" class="small-button" data-chem-check>Check for ice and carbon here</button>
+          <div data-chem-live role="status" aria-live="polite"></div>
+          <details class="about">
+            <summary>Where the list comes from</summary>
+            <p class="note small">
+              Each place was picked from published research: SPHEREx's first ice and PAH maps (Hora et al. 2026), JWST's
+              Ice Age program, and earlier ISO, Spitzer and AKARI studies. Amounts are shown only where the paper gives
+              them, as a percentage of the water ice in the same direction. Nothing here is estimated by this site.
+              "Pre-life" means the raw ingredients of life's chemistry, not life.
+            </p>
+          </details>
+        </section>
         <section id="tab-guide" role="tabpanel" aria-labelledby="tab-guide-button" class="tab-body guide" hidden>
+          <h3 class="panel-heading">Why use SPHEREx Xplorer</h3>
+          <ul class="guide-goals why-list">
+            <li><strong>The data, visualised.</strong> SPHEREx's 102 infrared colours as a false-colour sky, images that play over time, and spectra and light curves as charts, straight from NASA's archive.</li>
+            <li><strong>Extra information.</strong> Click any star for what it is, how far away and how fast it moves (SIMBAD, Gaia, AllWISE), with a "?" on every control and this guide.</li>
+            <li><strong>Search by what's there.</strong> The <em>Chemistry</em> tab finds places with water ice, CO₂, CO, methanol or carbon molecules, or "signs of pre-life chemistry", each backed by a published paper, and checks any spot with SPHEREx's own spectrum.</li>
+          </ul>
           <h3 class="panel-heading">What SPHEREx sees</h3>
           <p>
             <strong>SPHEREx</strong> is a NASA telescope launched in March 2025. It maps the <em>whole sky</em> in infrared

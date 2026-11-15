@@ -1,15 +1,17 @@
 /**
  * Turning what someone typed into a place in the sky (PLAN.md §8.2).
- * Order: coordinates → featured target → the data server's name lookup (SIMBAD).
+ * Order: coordinates → featured target → an ingredient search ("water ice", "signs of
+ * pre-life": Milestone 3) → the data server's name lookup (SIMBAD).
  * Without the data server (demo mode), only coordinates and featured targets work.
  */
 import { FriendlyError, getJson } from '../shared/api.js';
 import { parseCoordinates } from '../shared/coords.js';
 import { viewPosition } from '../shared/motion.js';
+import { chemistryQuery, findTargets } from '../shared/chemistry.js';
 import { findFeatured, suggestFeatured } from '../shared/targets.js';
 
 /**
- * @typedef {{ra: number, dec: number, name: string, target?: string, fov?: number}} Destination
+ * @typedef {{ra: number, dec: number, name: string, target?: string, fov?: number, find?: object}} Destination
  */
 
 /**
@@ -29,6 +31,13 @@ export async function resolveQuery(text, { live }) {
   const featured = findFeatured(query);
   if (featured) {
     return { ...viewPosition(featured), name: featured.name, target: featured.slug, fov: featured.demo?.fov_arcsec };
+  }
+
+  // An ingredient rather than a star: go to the best match and open the Chemistry list.
+  const find = chemistryQuery(query);
+  if (find) {
+    const first = findTargets(find).find((t) => t.ra != null);
+    if (first) return { ra: first.ra, dec: first.dec, name: first.name, target: first.name, fov: first.fov_arcsec, find };
   }
 
   if (live) {

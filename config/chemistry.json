@@ -1,0 +1,147 @@
+{
+  "_note": "Curated list for the chemistry search (Milestone 3). Every detection and number comes from the paper listed with it; nothing is estimated. 'percent_of_h2o' = ice amount as a percentage of the water ice along the same line of sight (a range where the paper gives one). Coordinates: J2000/ICRS from the paper, or converted from its galactic/B1950 values (noted in coords_source). Entries with 'resolve' instead of ra/dec are looked up by name with the data server (SIMBAD). Compiled 2026-11-15.",
+  "ingredients": {
+    "h2o_ice": { "label": "Water ice", "short": "H₂O ice", "um": 3.05, "kind": "ice", "spherex": true,
+      "why": "Water frozen onto dust grains. New planets can inherit it: the likely source of much of the water on worlds like Earth." },
+    "co2_ice": { "label": "Carbon dioxide ice", "short": "CO₂ ice", "um": 4.27, "kind": "ice", "spherex": true,
+      "why": "Frozen CO₂ forms together with water ice; a store of carbon and oxygen." },
+    "co_ice": { "label": "Carbon monoxide ice", "short": "CO ice", "um": 4.67, "kind": "ice", "spherex": true,
+      "why": "Freezes out only in the coldest, densest places; hydrogen atoms turn it into methanol." },
+    "ch3oh_ice": { "label": "Methanol ice", "short": "CH₃OH ice", "um": 3.53, "kind": "ice", "spherex": false,
+      "why": "The simplest complex organic molecule. A starting point for bigger organic molecules; its bands are too weak for SPHEREx, so detections here come from other telescopes." },
+    "pah": { "label": "PAH carbon molecules", "short": "PAH 3.3 µm", "um": 3.29, "kind": "organic", "spherex": true,
+      "why": "Polycyclic aromatic hydrocarbons: flat, soot-like carbon molecules that glow when lit by ultraviolet starlight." },
+    "aliphatic": { "label": "Chain-like organics (C–H)", "short": "C–H 3.4 µm", "um": 3.4, "kind": "organic", "spherex": true,
+      "why": "Carbon chains with hydrogen attached (aliphatic C–H bonds): another form of organic carbon in space." }
+  },
+  "presets": {
+    "prelife": {
+      "label": "Signs of pre-life chemistry",
+      "explain": "Places where the raw ingredients of life's chemistry have been seen together: water ice plus organic carbon (methanol ice, PAHs or chain-like organics). These are ingredients, not signs of life.",
+      "all": ["h2o_ice"],
+      "any": ["ch3oh_ice", "pah", "aliphatic"]
+    }
+  },
+  "typical": {
+    "_note": "Median ice amounts in % of water ice from the Spitzer ice legacy survey (Öberg et al. 2011, ApJ 740, 109, Table 2), for comparison.",
+    "low_mass_protostars": { "co_ice": 29, "co2_ice": 29, "ch3oh_ice": 3 },
+    "high_mass_protostars": { "co_ice": 13, "co2_ice": 13, "ch3oh_ice": 4 },
+    "background_stars": { "co_ice": 31, "co2_ice": 38, "ch3oh_ice": 4 },
+    "reference": { "label": "Öberg et al. 2011, ApJ 740, 109", "url": "https://arxiv.org/abs/1107.5825" }
+  },
+  "targets": [
+    {
+      "id": "dr21", "name": "DR 21 (Cygnus X)", "kind": "Star-forming cloud", "where": "Cygnus X star-forming complex",
+      "ra": 309.72828, "dec": 42.32084, "fov_arcsec": 1200,
+      "coords_source": "Spectrum position l = 81.6629°, b = +0.5502° in Hora et al. 2026, converted to J2000",
+      "spherex_result": true,
+      "ingredients": { "h2o_ice": {}, "co2_ice": {}, "co_ice": {} },
+      "summary": "SPHEREx mapped a ridge of water ice across DR 21, with CO₂ and CO ice absorption too.",
+      "references": [{ "label": "Hora et al. 2026, ApJ (SPHEREx ice and PAH maps)", "url": "https://arxiv.org/abs/2603.12390" }]
+    },
+    {
+      "id": "ldn935", "name": "LDN 935 “Gulf of Mexico”", "kind": "Dark cloud", "where": "North America / Pelican Nebula complex, Cygnus",
+      "ra": 314.28702, "dec": 43.65812, "fov_arcsec": 3600,
+      "coords_source": "Field centre l ≈ 84.8°, b ≈ −1.2° in Hora et al. 2026, converted to J2000 (approximate centre)",
+      "spherex_result": true,
+      "ingredients": { "h2o_ice": {}, "co2_ice": {} },
+      "summary": "SPHEREx measured water and CO₂ ice towards 231 stars behind this cloud; in some spots CO₂ ice is stronger than water ice.",
+      "references": [{ "label": "Hora et al. 2026, ApJ (SPHEREx ice and PAH maps)", "url": "https://arxiv.org/abs/2603.12390" }]
+    },
+    {
+      "id": "nir38", "name": "NIR38 (Chamaeleon I)", "kind": "Star behind a dense cloud", "where": "Chamaeleon I cloud, about 500 light-years away",
+      "ra": 166.60654, "dec": -77.38774, "fov_arcsec": 600,
+      "coords_source": "McClure et al. 2023",
+      "ingredients": { "h2o_ice": {}, "co2_ice": { "percent_of_h2o": [10, 20] }, "co_ice": { "percent_of_h2o": [20, 40] }, "ch3oh_ice": {} },
+      "summary": "JWST's Ice Age study found the coldest pristine ices yet: water, CO₂, CO, ammonia, methane and methanol, before any star warms them.",
+      "references": [{ "label": "McClure et al. 2023, Nature Astronomy 7, 431", "url": "https://doi.org/10.1038/s41550-022-01875-w" }]
+    },
+    {
+      "id": "j110621", "name": "J110621 (Chamaeleon I)", "kind": "Star behind a dense cloud", "where": "Chamaeleon I cloud, about 500 light-years away",
+      "ra": 166.59017, "dec": -77.39837, "fov_arcsec": 600,
+      "coords_source": "McClure et al. 2023",
+      "ingredients": { "h2o_ice": {}, "co2_ice": { "percent_of_h2o": [10, 20] }, "co_ice": { "percent_of_h2o": [20, 40] }, "ch3oh_ice": {} },
+      "summary": "The second Ice Age sightline, even more hidden (about 95 magnitudes of dimming in visible light); the same ice inventory including methanol.",
+      "references": [{ "label": "McClure et al. 2023, Nature Astronomy 7, 431", "url": "https://doi.org/10.1038/s41550-022-01875-w" }]
+    },
+    {
+      "id": "elias16", "name": "Elias 16 (Taurus)", "kind": "Star behind a dark cloud", "where": "Taurus dark cloud, about 450 light-years away",
+      "ra": 69.91192, "dec": 26.19072, "fov_arcsec": 600,
+      "coords_source": "2MASS J04393886+2611266 (Whittet et al. 2009)",
+      "ingredients": { "h2o_ice": {}, "co2_ice": { "percent_of_h2o": 18 } },
+      "summary": "The classic test case for quiet-cloud ice: a background giant star seen through the Taurus cloud.",
+      "references": [
+        { "label": "Whittet et al. 2009, ApJ 695, 94", "url": "https://people.cas.uab.edu/~gerak/papers/whittet2009apj695.pdf" },
+        { "label": "Gibb et al. 2000, ApJ 536, 347", "url": "https://doi.org/10.1086/308940" }
+      ]
+    },
+    {
+      "id": "w33a", "name": "W33A", "kind": "Massive young star", "where": "Sagittarius",
+      "ra": 273.66417, "dec": -17.86694, "fov_arcsec": 600,
+      "coords_source": "Gibb et al. 2000",
+      "ingredients": { "h2o_ice": {}, "co2_ice": { "percent_of_h2o": 13 }, "co_ice": { "percent_of_h2o": 8 }, "ch3oh_ice": { "percent_of_h2o": [5, 22] } },
+      "summary": "One of the best-studied ice sources: deep water ice, CO₂, CO, ammonia and plenty of methanol.",
+      "references": [
+        { "label": "Gibb et al. 2000, ApJ 536, 347", "url": "https://doi.org/10.1086/308940" },
+        { "label": "Dartois et al. 1999, A&A 342, L32", "url": "https://scholarlypublications.universiteitleiden.nl/access/item%3A3139066/view" }
+      ]
+    },
+    {
+      "id": "rafgl7009s", "name": "RAFGL 7009S", "kind": "Massive young star", "where": "Scutum (G25.65+1.05)",
+      "ra": 278.58702, "dec": -5.99511, "fov_arcsec": 600,
+      "coords_source": "B1950 position in Zavagno et al. 2002, precessed to J2000",
+      "ingredients": { "h2o_ice": {}, "co_ice": {}, "ch3oh_ice": { "percent_of_h2o": 30 } },
+      "summary": "Methanol is the second most common ice here, about 30% of the water ice: among the highest known.",
+      "references": [
+        { "label": "Dartois et al. 1999, A&A 342, L32", "url": "https://scholarlypublications.universiteitleiden.nl/access/item%3A3139066/view" },
+        { "label": "Zavagno et al. 2002, A&A 394, 225", "url": "https://doi.org/10.1051/0004-6361:20021129" }
+      ]
+    },
+    {
+      "id": "ngc7538irs9", "name": "NGC 7538 IRS 9", "kind": "Massive young star", "where": "Cepheus, about 9,000 light-years away",
+      "resolve": "NGC 7538 IRS 9", "fov_arcsec": 600,
+      "ingredients": { "h2o_ice": {}, "co2_ice": { "percent_of_h2o": 22 }, "co_ice": { "percent_of_h2o": 16 }, "ch3oh_ice": {} },
+      "summary": "Ice that hasn't been warmed much yet, with a lot of CO₂ and CO and some methanol.",
+      "references": [
+        { "label": "Gibb et al. 2000 compilation, via Garrod et al. 2008 Table 5", "url": "https://arxiv.org/abs/0803.1214" },
+        { "label": "Boogert et al. 2004, ApJ (CH₄ and CH₃OH in IRS 9)", "url": "https://arxiv.org/abs/astro-ph/0407270" }
+      ]
+    },
+    {
+      "id": "elias29", "name": "Elias 29 (ρ Ophiuchi)", "kind": "Young star (protostar)", "where": "ρ Ophiuchi cloud, about 500 light-years away",
+      "ra": 246.78875, "dec": -24.6225, "fov_arcsec": 600,
+      "coords_source": "Boogert et al. 2000 (Elias's J2000 position)",
+      "ingredients": { "h2o_ice": {}, "co2_ice": {}, "co_ice": {} },
+      "summary": "The brightest young star in the ρ Ophiuchi cloud; its ices are still cold and barely processed.",
+      "references": [{ "label": "Boogert et al. 2000, A&A 360, 683", "url": "https://arxiv.org/abs/astro-ph/0005030" }]
+    },
+    {
+      "id": "hh46irs", "name": "HH 46 IRS", "kind": "Young low-mass star (protostar)", "where": "Vela (Gum Nebula)",
+      "resolve": "HH 46 IRS", "fov_arcsec": 600,
+      "ingredients": { "h2o_ice": {}, "co2_ice": {}, "co_ice": {}, "ch3oh_ice": {} },
+      "summary": "A low-mass young star with water, CO₂, CO and methanol ices.",
+      "references": [{ "label": "Boogert et al. 2004, ApJS 154, 359 (Spitzer ices)", "url": "https://arxiv.org/abs/astro-ph/0406298" }]
+    },
+    {
+      "id": "orionbar", "name": "Orion Bar", "kind": "Starlit cloud edge (PDR)", "where": "Orion Nebula, about 1,300 light-years away",
+      "ra": 83.83536, "dec": -5.41971, "fov_arcsec": 600,
+      "coords_source": "JWST PDRs4All NIRSpec mosaic centre (Berné et al. 2022)",
+      "ingredients": { "pah": {}, "aliphatic": {} },
+      "summary": "The textbook place where ultraviolet light from hot stars makes carbon molecules glow at 3.3 µm (PAH) and 3.4 µm (chain-like organics).",
+      "references": [
+        { "label": "Berné et al. 2022, PASP (PDRs4All)", "url": "https://arxiv.org/abs/2201.05112" },
+        { "label": "Peeters et al. 2024, A&A 685, A74", "url": "https://openaccess.inaf.it/bitstreams/8f42dec5-28e4-421e-a08a-9398efccc81a/download" }
+      ]
+    },
+    {
+      "id": "m82", "name": "M82 (Cigar Galaxy)", "kind": "Starburst galaxy", "where": "Ursa Major, about 12 million light-years away",
+      "resolve": "M 82", "fov_arcsec": 1200,
+      "ingredients": { "h2o_ice": {}, "co2_ice": {}, "pah": {}, "aliphatic": {} },
+      "summary": "A whole galaxy where AKARI saw water and CO₂ ice near the centre and PAH and chain-like organics out into its galactic wind.",
+      "references": [
+        { "label": "Yamagishi et al. 2012, A&A 541, A10", "url": "https://doi.org/10.1051/0004-6361/201218904" },
+        { "label": "Yamagishi et al. 2013, ApJL (ices in M82)", "url": "https://arxiv.org/abs/1308.2041" }
+      ]
+    }
+  ]
+}

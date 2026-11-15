@@ -15,6 +15,9 @@ export const COLOUR_MAPS = ['gray', 'inferno', 'viridis', 'cividis'];
 export const STRETCHES = ['percent', 'fixed', 'auto'];
 export const SPEEDS = [0.25, 0.5, 1, 2, 4, 8];
 export const CATALOGUES = ['simbad', 'gaia', 'allwise'];
+/** Chemistry search (Milestone 3): ingredient ids from config/chemistry.json, or a preset. */
+export const FIND_PRESETS = ['prelife'];
+export const FIND_INGREDIENTS = ['h2o_ice', 'co2_ice', 'co_ice', 'ch3oh_ice', 'pah', 'aliphatic'];
 export const DEFAULTS = {
   // SPHEREx false colour (stars vs warm dust) opens first; see stellar/sky-view.js.
   base: 'spherex_rgb',
@@ -137,6 +140,18 @@ export function readStellarState(search, { limits, releases, skyMaps }) {
     else bad('release', `releases are ${releases.join(', ')}`);
   }
 
+  // find=prelife,h2o_ice (match=any for "any of them"): open the Chemistry tab with this search.
+  if (params.has('find')) {
+    const words = params.get('find').split(',').filter(Boolean);
+    if (words.length && words.every((w) => FIND_PRESETS.includes(w) || FIND_INGREDIENTS.includes(w))) {
+      state.find = {
+        ingredients: words.filter((w) => FIND_INGREDIENTS.includes(w)),
+        match: params.get('match') === 'any' ? 'any' : 'all',
+        ...(words.find((w) => FIND_PRESETS.includes(w)) ? { preset: words.find((w) => FIND_PRESETS.includes(w)) } : {}),
+      };
+    } else bad('find', `search for ${[...FIND_PRESETS, ...FIND_INGREDIENTS].join(', ')}`);
+  }
+
   for (const flag of ['autoplay', 'embed', 'demo']) {
     if (params.has(flag)) state[flag] = params.get(flag) === '1' || params.get(flag) === 'true';
   }
@@ -172,6 +187,10 @@ export function stellarParams(state) {
   if (state.overlay) params.set('overlay', state.overlay);
   if (state.cat?.length) params.set('cat', state.cat.join(','));
   if (state.release?.length) params.set('release', state.release.join(','));
+  if (state.find && (state.find.preset || state.find.ingredients?.length)) {
+    params.set('find', [...(state.find.preset ? [state.find.preset] : []), ...(state.find.ingredients ?? [])].join(','));
+    if (state.find.match === 'any' && state.find.ingredients?.length > 1) params.set('match', 'any');
+  }
   if (state.autoplay) params.set('autoplay', '1');
   if (state.embed) params.set('embed', '1');
   if (state.demo) params.set('demo', '1');

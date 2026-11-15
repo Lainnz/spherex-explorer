@@ -34,6 +34,9 @@ export function setupPhotometry({ spectrumTab, curveTab, state, live, getDemo })
   let curveChart = null;
   let drawQueued = false;
   let windowTouched = false;
+  const listeners = new Set(); // told about new points (chemistry check, Milestone 3)
+  let failure = null;
+  const tell = () => listeners.forEach((fn) => fn({ subject, points, done, error: failure }));
 
   const status = (text) => {
     $s('[data-photometry-status]').textContent = text;
@@ -173,6 +176,7 @@ export function setupPhotometry({ spectrumTab, curveTab, state, live, getDemo })
     subject = next;
     points = [];
     done = null;
+    failure = null;
     windowTouched = false;
     $s('[data-subject]').textContent = subject.name;
     $c('[data-subject]').textContent = subject.name;
@@ -206,6 +210,7 @@ export function setupPhotometry({ spectrumTab, curveTab, state, live, getDemo })
           points.push(message);
           status(`${points.length} measurements so far…`);
           queueDraw();
+          tell();
         }
         if (message.type === 'done') {
           done = message;
@@ -217,10 +222,15 @@ export function setupPhotometry({ spectrumTab, curveTab, state, live, getDemo })
           // Too bright for SPHEREx: the relative curve is the useful one.
           $c('#curve-relative').checked = Boolean(message.use_wing_light_curve);
           queueDraw();
+          tell();
         }
       }
     } catch (error) {
-      if (!signal.aborted) status(error.message);
+      if (!signal.aborted) {
+        status(error.message);
+        failure = error.message;
+        tell();
+      }
     }
   }
 
@@ -243,5 +253,12 @@ export function setupPhotometry({ spectrumTab, curveTab, state, live, getDemo })
     /** Draw the charts now (a tab just became visible, so it has a size). */
     refresh: queueDraw,
     subject: () => subject,
+    /** The measurements so far and whether they're finished. */
+    current: () => ({ subject, points, done, error: failure }),
+    /** Be told as measurements arrive: fn({subject, points, done}). */
+    onUpdate(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
   };
 }
