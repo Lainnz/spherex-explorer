@@ -33,6 +33,7 @@ import { setupObjectPopup } from './object-popup.js';
 import { setupOperations } from './operations.js';
 import { setupPhotometry } from './photometry-panel.js';
 import { setupTabs } from './tabs.js';
+import { setupTargetReadout } from './target-readout.js';
 import { createSequence } from './sequence.js';
 import { createSkyView, NO_SERVER_MAP, SKY_MAPS } from './sky-view.js';
 import { setupTimeBar } from './time-bar.js';
@@ -190,8 +191,9 @@ function setupSequence({ sky, place, live, home }) {
     root: $('.time-bar'), sequence, state, onStateChange: writeUrl, getBlinkPair: () => operations?.blinkPair(),
   });
   setupDisplayPanel({ root: $('.control-panel'), sequence, state, overlay, onStateChange: writeUrl, onReload: () => load() });
-  operations = setupOperations({ root: $('.control-panel'), sequence, state, toast, onStateChange: writeUrl });
+  operations = setupOperations({ root: $('.control-panel'), sequence, state, toast, onStateChange: writeUrl, live });
   setupFramePlayer({ panel: $('[data-frame-player]'), toggle: $('#player-toggle'), sequence });
+  setupTargetReadout({ root: $('.time-bar'), sequence, home, motion, toast });
 
   // The slider's date and the Band choice go into the address (not every frame of playback).
   sequence.onChange((what) => {
@@ -362,6 +364,33 @@ function setupSequence({ sky, place, live, home }) {
 // --- Start ---------------------------------------------------------------------------------------
 let popup = null; // the click-to-identify popup (created once the sky is ready)
 
+/**
+ * Live RA/Dec under the mouse (from Elaine's demo). Reads the pointer on the sky's wrapper,
+ * so it works in both the rotate tool (where a see-through layer covers Aladin) and the move tool.
+ */
+function setupCursorReadout(sky) {
+  const surface = $('#sky');
+  const readout = $('[data-cursor]');
+  let queued = null;
+  surface.addEventListener('pointermove', (event) => {
+    if (event.pointerType === 'touch') return;
+    const box = surface.getBoundingClientRect();
+    queued = { x: event.clientX - box.left, y: event.clientY - box.top };
+    requestAnimationFrame(() => {
+      if (!queued) return;
+      const where = sky.pixelToSky(queued.x, queued.y);
+      queued = null;
+      readout.textContent = where && Number.isFinite(where.ra) && Number.isFinite(where.dec)
+        ? `${formatRa(where.ra)} ${formatDec(where.dec)} · ${where.ra.toFixed(4)}°, ${where.dec >= 0 ? '+' : ''}${where.dec.toFixed(4)}°`
+        : 'Off the sky';
+    });
+  });
+  surface.addEventListener('pointerleave', () => {
+    queued = null;
+    readout.textContent = 'Point at the sky to read its coordinates';
+  });
+}
+
 async function main() {
   notices.forEach((notice) => toast(notice, 'warning', 9));
 
@@ -411,7 +440,8 @@ async function main() {
   sky.setTarget(home.ra, home.dec);
   if (import.meta.env.DEV) window.__sky = sky; // for debugging in the browser console only
 
-  const layers = setupLayers({ root: $('.drawer'), sky, state, home, onChange: writeUrl });
+  setupCursorReadout(sky);
+  const layers = setupLayers({ root: $('.drawer'), sky, state, home, live, onChange: writeUrl });
   // Lift the "Loading the sky…" cover once the map is on screen (or after 15 s regardless).
   sky.whenReady().then(() => $('[data-sky-loading]').classList.add('is-done'));
   const panel = setupControlPanel({
@@ -441,6 +471,20 @@ async function main() {
     },
   });
   const images = setupSequence({ sky, place, live, home });
+  // Match the sky map's colour to the frame shown (once playback settles, to spare downloads).
+  const matchBox = $('#match-wavelength');
+  let matchTimer = null;
+  const matchNow = () => {
+    clearTimeout(matchTimer);
+    matchTimer = setTimeout(() => {
+      const frame = images.sequence.current();
+      if (matchBox.checked && frame && !frame.kind && frame.detectors?.length === 1 && Number.isFinite(frame.wavelength_um)) {
+        layers.matchWavelength(frame.wavelength_um);
+      }
+    }, 600);
+  };
+  images.sequence.onChange((what) => { if (what === 'time' || what === 'band') matchNow(); });
+  matchBox.addEventListener('change', matchNow);
 
   // --- Phase 9: clicking objects, the data tabs, favourites ----------------------------------
   const getDemo = () => (place.featured ? loadDemo(place.featured.slug) : Promise.resolve(null));

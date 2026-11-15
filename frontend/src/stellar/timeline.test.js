@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  advance, buildPlaylist, dateToMjd, frameAt, mjdToDate, SECONDS_PER_PASS, stepFrame, timeSpan, visitTicks,
+  advance, buildPlaylist, channelTolerance, dateToMjd, frameAt, mjdToDate, SECONDS_PER_PASS, stepFrame, timeSpan, visitTicks,
 } from './timeline.js';
 
 const frames = [
@@ -59,5 +59,22 @@ describe('dates and ticks', () => {
   it('places visit ticks along the slider', () => {
     const ticks = visitTicks([{ visit: 1, t_start: 100 }, { visit: 2, t_start: 200 }], [100, 300]);
     expect(ticks.map((t) => t.position)).toEqual([0, 0.5]);
+  });
+});
+
+describe('same-colour playback (wavelength lock)', () => {
+  const frames = [
+    { id: 'a', t_mid: 3, detectors: [3], wavelength_um: 2.19 },
+    { id: 'b', t_mid: 1, detectors: [3], wavelength_um: 2.20 },
+    { id: 'c', t_mid: 2, detectors: [3], wavelength_um: 1.95 },
+  ];
+  it('keeps only frames at the locked colour, in time order', () => {
+    const list = buildPlaylist(frames, 'all', { um: 2.19, tolerance: 0.025 });
+    expect(list.map((f) => f.id)).toEqual(['b', 'a']);
+  });
+  it('uses half a SPHEREx channel as the tolerance', () => {
+    const wavelengths = [1.0, 1.1, 1.2, 1.3];
+    expect(channelTolerance(1.19, wavelengths)).toBeCloseTo(0.05, 9);
+    expect(channelTolerance(0.9, wavelengths)).toBeCloseTo(0.05, 9); // edge channel
   });
 });

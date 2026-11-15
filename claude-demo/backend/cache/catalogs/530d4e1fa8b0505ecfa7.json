@@ -1,1 +1,0 @@
-{"catalog": "allwise", "service": "AllWISE via NOIRLab Astro Data Lab", "attribution": "NASA Wide-field Infrared Survey Explorer (WISE/NEOWISE), AllWISE catalogue", "query": {"ra": 83.63308, "dec": 22.01449, "radius_deg": 0.002777777777777778, "limit": 50}, "count": 0, "truncated": false, "rows": [], "problems": []}

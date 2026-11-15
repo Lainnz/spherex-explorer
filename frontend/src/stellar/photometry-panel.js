@@ -7,7 +7,8 @@
  *   For stars too bright for SPHEREx, the relative curve from the outer glow is offered.
  */
 import { API_BASE, FriendlyError } from '../shared/api.js';
-import { CUBE_WAVELENGTHS } from '../shared/wavelength.js';
+import { FEATURE_COLOURS, SPECTRAL_FEATURES } from '../shared/spectral-features.js';
+import { CUBE_WAVELENGTHS, detectorOfPlane } from '../shared/wavelength.js';
 import { createScatter, DETECTOR_COLOURS, visitColour } from './charts.js';
 import { readLines } from './frames-source.js';
 import { binSpectrum, defaultWindow, downloadText, inWindow, measurable, toCsv } from './photometry-math.js';
@@ -44,6 +45,7 @@ export function setupPhotometry({ spectrumTab, curveTab, state, live, getDemo })
     spectrumChart ??= await createScatter($s('canvas'), {
       xLabel: 'Wavelength (µm)',
       yLabel: 'Brightness (µJy)',
+      features: SPECTRAL_FEATURES.map((f) => ({ um: f.um, label: f.label, colour: FEATURE_COLOURS[f.kind] })),
       tooltip: (p) => `${p.label}: ${p.y.toFixed(1)} ± ${((p.yMax - p.yMin) / 2).toFixed(1)} µJy at ${p.x.toFixed(3)} µm`,
     });
     curveChart ??= await createScatter($c('canvas'), {
@@ -95,11 +97,30 @@ export function setupPhotometry({ spectrumTab, curveTab, state, live, getDemo })
       }));
     }
     spectrumChart.data.datasets = datasets;
+    spectrumChart.options.plugins.featureLines.show = $s('#show-features').checked;
     spectrumChart.update('none');
+    drawTable();
     const clean = measurable(points).filter((p) => !p.flagged).length;
     $s('[data-spectrum-summary]').textContent = points.length
       ? `${points.length} measurements · ${clean} clean${done?.saturated ? ` · ${done.saturated} saturated` : ''}`
       : '';
+  }
+
+  /** Elaine's table view: the clean points averaged per SPHEREx channel (only when open). */
+  function drawTable() {
+    const details = $s('[data-spectrum-table]');
+    if (!details?.open) return;
+    const binned = binSpectrum(measurable(points).filter((p) => !p.flagged), CUBE_WAVELENGTHS);
+    details.querySelector('tbody').replaceChildren(...binned.map((b) => {
+      const row = document.createElement('tr');
+      for (const text of [b.wavelength_um.toFixed(3), b.flux_ujy.toFixed(1), b.err_ujy.toFixed(1), String(b.n_points), `D${detectorOfPlane(b.channel)}`]) {
+        const cell = document.createElement('td');
+        cell.textContent = text;
+        row.append(cell);
+      }
+      return row;
+    }));
+    details.querySelector('[data-table-empty]').hidden = binned.length > 0;
   }
 
   function drawCurve() {
@@ -204,7 +225,8 @@ export function setupPhotometry({ spectrumTab, curveTab, state, live, getDemo })
   }
 
   // --- Controls --------------------------------------------------------------------------------
-  for (const control of ['#show-flagged', '#bin-channels', '#colour-by']) $s(control).addEventListener('change', queueDraw);
+  for (const control of ['#show-flagged', '#bin-channels', '#colour-by', '#show-features']) $s(control).addEventListener('change', queueDraw);
+  $s('[data-spectrum-table]').addEventListener('toggle', drawTable);
   $c('#curve-relative').addEventListener('change', queueDraw);
   for (const input of [$c('#window-min'), $c('#window-max')]) {
     input.addEventListener('change', () => {

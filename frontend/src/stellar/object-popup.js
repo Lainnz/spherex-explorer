@@ -3,7 +3,8 @@
  * what kind of object it is, brightness and colour, distance in light-years, how fast it
  * moves, with ★ Favourite, ➕ Select and "Measure spectrum" buttons.
  * Live answers come from /api/object (SIMBAD + Gaia); in demo mode only the featured
- * target itself is known (saved answer).
+ * target itself is known (saved answer). The infrared match from AllWISE comes from
+ * /api/identify (Elaine's three-catalogue lookup) and is added when it arrives.
  */
 import { getJson } from '../shared/api.js';
 import { formatDec, formatRa } from '../shared/coords.js';
@@ -15,6 +16,27 @@ import { mjdToDate } from './timeline.js';
 const escapeHtml = (text) => String(text ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const CLICK_TOLERANCE_PX = 8;
 const DEMO_MATCH_ARCSEC = 20;
+
+/** AllWISE infrared magnitudes for the popup (3.4 and 4.6 µm overlap SPHEREx's D4–D6). */
+function infraredHtml(identify) {
+  const part = identify?.allwise;
+  const match = part?.matches?.[0];
+  if (!match) return part?.error ? '<p class="note small">AllWISE: no service answered.</p>' : '<p class="note small">AllWISE: no infrared source this close.</p>';
+  const mag = (value, sigma) => (value == null ? '–' : `${Number(value).toFixed(2)}${sigma != null ? ` ± ${Number(sigma).toFixed(2)}` : ''}`);
+  const colour = match.w1mpro != null && match.w2mpro != null ? match.w1mpro - match.w2mpro : null;
+  // Ordinary stars have W1−W2 near 0; redder means warm dust, a buried young star or a cool brown dwarf.
+  const meaning = colour == null ? '' : colour >= 0.8 ? ' (very red: warm dust, a buried young star or an active galaxy)'
+    : colour >= 0.3 ? ' (redder than a normal star)' : ' (like an ordinary star)';
+  return `
+    <h4 class="popup-subhead">Infrared (AllWISE)</h4>
+    <dl class="facts">
+      <dt>Source</dt><dd class="mono small">${escapeHtml(match.designation ?? '')} · ${Number(match.sep_arcsec ?? 0).toFixed(1)}″ away</dd>
+      <dt>W1 3.4 µm</dt><dd>${mag(match.w1mpro, match.w1sigmpro)} mag</dd>
+      <dt>W2 4.6 µm</dt><dd>${mag(match.w2mpro, match.w2sigmpro)} mag</dd>
+      ${colour != null ? `<dt>W1−W2</dt><dd>${colour.toFixed(2)}${meaning}</dd>` : ''}
+    </dl>
+    <p class="note small">From ${escapeHtml(part.service ?? 'AllWISE')}.</p>`;
+}
 
 /** A stable id for the lists: the catalogue id if known, else the position. */
 const idOf = (answer) => answer.simbad_id ?? (answer.gaia_source_id ? `Gaia DR3 ${answer.gaia_source_id}` : `${answer.ra.toFixed(5)},${answer.dec.toFixed(5)}`);
@@ -52,6 +74,7 @@ export function setupObjectPopup({ container, sky, sequence, live, place, getDem
         <header><h3>Nothing catalogued here</h3><button type="button" class="close" aria-label="Close">×</button></header>
         <p class="note">${escapeHtml(answer.message ?? 'No catalogued object at this spot.')}</p>
         <p class="mono small">${formatRa(click.ra)} ${formatDec(click.dec)}</p>
+        <div data-infrared></div>
         <div class="popup-actions"><button type="button" class="small-button" data-measure>📈 Measure spectrum here</button></div>`;
     } else {
       // Uncertainties keep two significant figures (Barnard's Star: ± 0.00044, not ± 0).
@@ -78,6 +101,7 @@ export function setupObjectPopup({ container, sky, sequence, live, place, getDem
           ${fact('Also called', answer.other_names?.length ? escapeHtml(answer.other_names.slice(0, 5).join(' · ')) : null)}
         </dl>
         <p class="note small">From ${escapeHtml(answer.sources.join(' + '))}. Position on ${escapeHtml(mjdToDate(click.mjd))}.</p>
+        <div data-infrared></div>
         <div class="popup-actions">
           <button type="button" class="small-button" data-favourite aria-pressed="${favourites.has(id)}">★ Favourite</button>
           <button type="button" class="small-button" data-select aria-pressed="${selected.has(id)}">➕ Select</button>
@@ -116,6 +140,10 @@ export function setupObjectPopup({ container, sky, sequence, live, place, getDem
     popup.hidden = false;
     place_(click.x, click.y);
     popup.innerHTML = '<p class="note">Looking this up in SIMBAD and Gaia…</p>';
+    // Ask AllWISE (via /api/identify) at the same time; it's shown when it arrives.
+    const infrared = live
+      ? getJson('/api/identify', { ra: click.ra.toFixed(6), dec: click.dec.toFixed(6), radius_arcsec: radius.toFixed(1) }, { timeoutMs: 60000 }).catch(() => null)
+      : null;
     try {
       let answer;
       if (live) {
@@ -132,6 +160,12 @@ export function setupObjectPopup({ container, sky, sequence, live, place, getDem
         };
       }
       if (token === request) render(answer, where);
+      if (infrared) {
+        const slot = popup.querySelector('[data-infrared]');
+        if (slot && token === request) slot.innerHTML = '<p class="note small">Checking AllWISE infrared…</p>';
+        const identify = await infrared;
+        if (token === request && popup.querySelector('[data-infrared]')) popup.querySelector('[data-infrared]').innerHTML = infraredHtml(identify);
+      }
     } catch (error) {
       if (token === request) {
         popup.innerHTML = `<header><h3>Couldn't look this up</h3><button type="button" class="close" aria-label="Close">×</button></header><p class="note">${escapeHtml(error.message)}</p>`;

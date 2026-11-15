@@ -1,8 +1,0 @@
-# SPHEREx Xplorer backend — Python packages
-fastapi>=0.115          # the web server framework (defines our /api/... addresses)
-uvicorn[standard]>=0.30 # runs the FastAPI app
-astropy>=6.1            # reads FITS files, sky coordinates (WCS), VOTables
-numpy>=1.26             # fast number crunching on image arrays
-httpx>=0.27             # downloads from the IRSA archive
-reproject>=0.13         # aligns two images onto the same sky grid (Milestone 7)
-pillow>=10              # saves comparison results as PNG pictures (Milestone 7)

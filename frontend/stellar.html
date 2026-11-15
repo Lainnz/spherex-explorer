@@ -170,6 +170,7 @@
             <label class="field"><span>minus B (older)</span><select id="visit-b"></select></label>
             <label class="toggles"><input type="checkbox" id="normalize" checked /> Match brightness first</label>
             <button type="button" class="small-button" data-run="diff">Subtract</button>
+            <div class="diff-stats" data-diff-stats role="status" aria-live="polite" hidden></div>
           </div>
           <div data-op-section="composite" class="op-section" hidden>
             <div class="field-grid">
@@ -194,6 +195,7 @@
         </div>
       </aside>
 
+      <output class="cursor-readout mono" data-cursor aria-live="off" title="Sky position under your mouse (RA, Dec)">Point at the sky to read its coordinates</output>
       <div class="toolbar" role="toolbar" aria-label="Navigation" data-toolbar></div>
       <div class="moved-chip" data-moved-chip hidden>
         <span data-moved></span>
@@ -207,6 +209,7 @@
           <button role="tab" aria-selected="false" aria-controls="tab-flags" id="tab-flags-button">Flags</button>
           <button role="tab" aria-selected="false" aria-controls="tab-spectrum" id="tab-spectrum-button">Spectrum</button>
           <button role="tab" aria-selected="false" aria-controls="tab-curve" id="tab-curve-button">Light curve</button>
+          <button role="tab" aria-selected="false" aria-controls="tab-guide" id="tab-guide-button">Guide</button>
         </div>
 
         <section id="tab-info" role="tabpanel" aria-labelledby="tab-info-button" class="tab-body" hidden>
@@ -243,12 +246,36 @@
           <div class="toggles">
             <label><input type="checkbox" id="bin-channels" /> Combine into SPHEREx's 102 channels</label>
             <label><input type="checkbox" id="show-flagged" /> Show flagged points (hollow)</label>
+            <label><input type="checkbox" id="show-features" checked /> Mark known features (ice, organics, hydrogen)
+              <button type="button" class="help" data-help="Dashed lines show where well-known features would appear: water ice 3.05 µm, organic PAH 3.29 µm, C–H organics 3.4 µm, CO₂ ice 4.27 µm, CO 4.67 µm, and hydrogen gas lines. A line is only a reference: it doesn't mean the feature is there. Ices show as dips, PAH and hydrogen as bumps.">?</button></label>
             <label class="inline-select">Colour by
               <select id="colour-by"><option value="detector">detector</option><option value="visit">visit</option></select>
             </label>
           </div>
           <button type="button" class="small-button" data-csv>Download CSV</button>
+          <details class="spectrum-table" data-spectrum-table>
+            <summary>Table of the points (averaged per SPHEREx channel)</summary>
+            <div class="table-scroll">
+              <table class="mono small">
+                <thead><tr><th>µm</th><th>µJy</th><th>± 1σ</th><th>Images</th><th>Det.</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <p class="note small" data-table-empty>No clean points yet.</p>
+          </details>
           <p class="note small" data-method></p>
+          <details class="about">
+            <summary>How to read it, and its limits</summary>
+            <p class="note small">
+              Each SPHEREx image sees this spot at a slightly different infrared colour (its filters change colour across
+              the detector), so many images together trace the spectrum. Each channel is a few percent of the wavelength
+              wide (about 0.02 µm at 0.8 µm), so narrow lines show as small bumps, not sharp spikes.
+            </p>
+            <p class="note small">
+              Limits: measured in a small circle, so close neighbours can blend in; very bright stars overflow the detector
+              (use the light curve's outer-glow option); flagged pixels are left out unless you show them.
+            </p>
+          </details>
         </section>
 
         <section id="tab-curve" role="tabpanel" aria-labelledby="tab-curve-button" class="tab-body" hidden>
@@ -263,6 +290,43 @@
             <button type="button" class="help" data-help="For stars too bright for SPHEREx (their centre overflows), this measures the glow around them instead. It shows how the brightness changes (2 = twice as bright as usual), not the exact brightness.">?</button></label>
           <button type="button" class="small-button" data-csv>Download CSV</button>
         </section>
+        <section id="tab-guide" role="tabpanel" aria-labelledby="tab-guide-button" class="tab-body guide" hidden>
+          <h3 class="panel-heading">What SPHEREx sees</h3>
+          <p>
+            <strong>SPHEREx</strong> is a NASA telescope launched in March 2025. It maps the <em>whole sky</em> in infrared
+            light from 0.75 to 5.0 µm, too red for our eyes, split into 102 colours: a spectrum of every point in the sky.
+          </p>
+          <ul class="guide-goals">
+            <li><strong>The first moment of the universe:</strong> mapping hundreds of millions of galaxies in 3D to look for the pattern left by inflation.</li>
+            <li><strong>Ingredients for life:</strong> finding water, CO₂ and CO ice frozen on dust in cold clouds where stars and planets form.</li>
+            <li><strong>All the light galaxies ever made:</strong> measuring the faint glow of galaxies too dim to see one by one.</li>
+          </ul>
+          <p>
+            <strong>Rainbow filters.</strong> Each of the six detectors sits behind a filter whose colour changes from edge to
+            edge (17 colours each, 6 × 17 = 102). As SPHEREx steps across the sky, a star lands on many colours, and those
+            snapshots build its spectrum (the <em>Spectrum</em> tab).
+          </p>
+          <div class="table-scroll">
+            <table class="small">
+              <thead><tr><th>Det.</th><th>µm</th><th>What stands out</th></tr></thead>
+              <tbody>
+                <tr><td class="mono">D1</td><td class="mono">0.75–1.10</td><td>Starlight. Most stars are brightest here.</td></tr>
+                <tr><td class="mono">D2</td><td class="mono">1.11–1.63</td><td>Stars and galaxies; light that passes through thin dust.</td></tr>
+                <tr><td class="mono">D3</td><td class="mono">1.66–2.40</td><td>Dust-hidden stars; hydrogen glows at 1.88 µm (Paschen-α).</td></tr>
+                <tr><td class="mono">D4</td><td class="mono">2.45–3.77</td><td>Water ice absorbs near 3.05 µm; organic PAH molecules glow at 3.3 µm.</td></tr>
+                <tr><td class="mono">D5</td><td class="mono">3.83–4.41</td><td>Hot hydrogen at 4.05 µm (Brackett-α); CO₂ ice absorbs near 4.27 µm.</td></tr>
+                <tr><td class="mono">D6</td><td class="mono">4.44–4.99</td><td>Warm dust; carbon monoxide near 4.67 µm.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <h3 class="panel-heading">Reading the tools</h3>
+          <p><strong>How often?</strong> Most of the sky is seen about every six months. Near the ecliptic poles SPHEREx looks many more times, the best places for the time slider.</p>
+          <p><strong>Pixels.</strong> One SPHEREx pixel is 6.15″ wide (about 1/300 of the Moon's width). The all-sky map is resampled to about 13″.</p>
+          <p><strong>Units.</strong> Images are in MJy/sr (brightness per patch of sky). Spectra are in µJy (total light from one source). A jansky is the standard astronomy unit of incoming light.</p>
+          <p><strong>Zodiacal light</strong> is sunlight scattered by, and heat from, dust in our own solar system. It is the brightest thing SPHEREx sees almost everywhere, so it is modelled and subtracted.</p>
+          <p><strong>False colour</strong> shows three invisible infrared colours as red, green and blue: a way to see differences, not what your eyes would see.</p>
+          <p><strong>Same colour</strong> (time bar) plays only frames taken at the same wavelength, and the <strong>σ map</strong> (Difference) shows which changes are bigger than the noise.</p>
+        </section>
         <section id="tab-layers" role="tabpanel" aria-labelledby="tab-layers-button" class="tab-body">
           <label class="field">
             <span>Sky map <button type="button" class="help" data-help="The picture of the whole sky behind everything. It opens on SPHEREx false colour: three of SPHEREx's 102 infrared colours shown as blue, green and red. Switch to the 102-colour map to look at one infrared colour at a time.">?</button></span>
@@ -274,6 +338,8 @@
             <input id="wavelength" type="range" min="0" max="101" step="1" />
             <small class="mono" data-wavelength></small>
           </label>
+          <label class="toggles"><input type="checkbox" id="match-wavelength" /> Match the sky map to the frame's colour
+            <button type="button" class="help" data-help="When you stop on a frame, the sky behind it switches to SPHEREx's all-sky map at the same infrared colour, so the frame blends in.">?</button></label>
           <label class="field">
             <span>Overlay <button type="button" class="help" data-help="A second sky map on top of the first. Use the slider to see through it.">?</button></span>
             <select id="overlay-map"><option value="">None</option></select>
@@ -283,11 +349,13 @@
             <legend>Show</legend>
             <label><input type="checkbox" id="show-footprints" checked /> SPHEREx image outlines</label>
             <label><input type="checkbox" id="show-coverage" /> SPHEREx coverage (DR1)</label>
+            <label><input type="checkbox" id="show-simbad" /> Known objects (SIMBAD)</label>
             <label><input type="checkbox" id="show-gaia" /> Gaia DR3 stars</label>
-            <label><input type="checkbox" id="show-allwise" /> AllWISE sources</label>
+            <label><input type="checkbox" id="show-allwise" /> AllWISE infrared sources</label>
+            <small class="note" data-catalogue-status role="status" aria-live="polite"></small>
           </fieldset>
           <p class="note">
-            <strong>SPHEREx</strong> (NASA) maps the sky in 102 infrared colours. <strong>Gaia</strong> (ESA)
+            <strong>SPHEREx</strong> (NASA) maps the sky in 102 infrared colours. <strong>SIMBAD</strong> (CDS) lists named, studied objects. <strong>Gaia</strong> (ESA)
             measures star positions, distances and motions. <strong>WISE</strong> (NASA) mapped the infrared
             sky from 2010. <strong>2MASS</strong> is a near-infrared sky survey.
           </p>
@@ -326,6 +394,7 @@
             <option value="bounce">Bounce</option>
           </select>
           <button type="button" class="small-button" data-blink aria-pressed="false" title="Blink between visits A and B (B)">Blink</button>
+          <button type="button" class="small-button" data-same-colour aria-pressed="false" title="Play only frames that saw the target at the same SPHEREx colour (wavelength) as this one">Same colour</button>
           <div class="slider-wrap">
             <input type="range" data-time min="0" max="1000" value="0" aria-label="Time" />
             <div class="ticks" data-ticks aria-hidden="true"></div>
@@ -334,6 +403,7 @@
         </div>
         <div class="time-info">
           <output class="mono" data-readout></output>
+          <output class="mono" data-target-value title="Brightness right at your coordinate in this frame (median of the 9 pixels around it)"></output>
           <span class="note" data-progress></span>
         </div>
         <div class="filmstrip" data-filmstrip aria-label="Frames"></div>

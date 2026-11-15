@@ -14,7 +14,7 @@ export const OPERATIONS = ['none', 'stack', 'diff', 'composite'];
 export const COLOUR_MAPS = ['gray', 'inferno', 'viridis', 'cividis'];
 export const STRETCHES = ['percent', 'fixed', 'auto'];
 export const SPEEDS = [0.25, 0.5, 1, 2, 4, 8];
-export const CATALOGUES = ['gaia', 'allwise'];
+export const CATALOGUES = ['simbad', 'gaia', 'allwise'];
 export const DEFAULTS = {
   // SPHEREx false colour (stars vs warm dust) opens first; see stellar/sky-view.js.
   base: 'spherex_rgb',

@@ -9,11 +9,34 @@ export const SECONDS_PER_PASS = 8;
 /**
  * Frames to play: in time order, only the chosen detector ("all" = every frame).
  * Operation results (no t_mid) are never in the playlist.
+ * With a wavelength lock {um, tolerance} only frames that saw the target at the same
+ * SPHEREx colour play (Elaine's "comparable channel" rule), so brightness changes are
+ * changes in the object, not in the colour being measured.
  */
-export function buildPlaylist(frames, band) {
+export function buildPlaylist(frames, band, lock = null) {
   return frames
     .filter((frame) => Number.isFinite(frame.t_mid) && (band === 'all' || frame.detectors?.includes(Number(band))))
+    .filter((frame) => !lock || (Number.isFinite(frame.wavelength_um) && Math.abs(frame.wavelength_um - lock.um) <= lock.tolerance))
     .sort((a, b) => a.t_mid - b.t_mid);
+}
+
+/**
+ * Half the width of the SPHEREx channel nearest a wavelength (µm), from the spacing of the
+ * all-sky cube's 102 channel centres. Two frames within this of each other saw the same colour.
+ * @param {number} um
+ * @param {number[]} wavelengths  channel centres, increasing
+ * @param {Set<number>} [blank]  planes to ignore (the two empty dichroic channels)
+ */
+export function channelTolerance(um, wavelengths, blank = new Set()) {
+  const centres = wavelengths.filter((_, plane) => !blank.has(plane));
+  let index = 0;
+  centres.forEach((value, i) => {
+    if (Math.abs(value - um) < Math.abs(centres[index] - um)) index = i;
+  });
+  const before = centres[Math.max(0, index - 1)];
+  const after = centres[Math.min(centres.length - 1, index + 1)];
+  const spacing = (after - before) / (index === 0 || index === centres.length - 1 ? 1 : 2);
+  return spacing / 2;
 }
 
 /** The frame closest in time to t (or null for an empty playlist). */

@@ -7,7 +7,7 @@
  * aladin.cds.unistra.fr/AladinLite/api/v3/<version>/, returned 404 on 2026-11-15).
  */
 import { ALADIN_URL } from '../shared/aladin-url.js';
-import { API_BASE } from '../shared/api.js';
+import { API_BASE, getJson } from '../shared/api.js';
 import datasets from '../shared/config.js';
 import { planeForWavelength } from '../shared/wavelength.js';
 
@@ -70,11 +70,19 @@ export const NO_SERVER_MAP = 'spherex_cube';
 /** Aladin options for one sky map. */
 const hipsOptions = (spec) => ({ name: spec.label, ...(spec.colormap ? { colormap: spec.colormap } : {}) });
 
+/**
+ * Catalogue markers. With the data server they come from /api/catalogs (Elaine's route:
+ * cached for a day, with a backup service for each catalogue, because CDS was down on
+ * 2026-11-14/15). Without it, Gaia and AllWISE come straight from VizieR; SIMBAD needs the server.
+ */
 export const CATALOGUE_LAYERS = {
-  gaia: { label: 'Gaia DR3 stars (ESA)', vizier: datasets.catalogs.gaia_dr3, color: '#F0E442' },
-  allwise: { label: 'AllWISE sources (NASA)', vizier: datasets.catalogs.allwise, color: '#E69F00' },
+  simbad: { label: 'Known objects (SIMBAD)', color: '#CC79A7', shape: 'square', size: 11, vizier: null },
+  gaia: { label: 'Gaia DR3 stars (ESA)', vizier: datasets.catalogs.gaia_dr3, color: '#F0E442', shape: 'circle', size: 8 },
+  allwise: { label: 'AllWISE sources (NASA)', vizier: datasets.catalogs.allwise, color: '#E69F00', shape: 'rhomb', size: 10 },
 };
-const CATALOGUE_MAX_RADIUS_DEG = 0.25; // keep catalogue downloads small
+const CATALOGUE_MAX_RADIUS_DEG = 0.5; // the server's limit; keeps downloads small
+/** A marker's name: SIMBAD name, AllWISE designation or Gaia source id. */
+const rowName = (row) => row.main_id ?? row.designation ?? (row.source_id ? `Gaia DR3 ${row.source_id}` : '');
 const VIEW_FOV_RANGE_DEG = [30 / 3600, 180];
 
 let aladinModule = null;
@@ -145,7 +153,7 @@ export async function createSkyView(container, { ra, dec, fovDeg, rotation = 0, 
 
   // Aladin keeps one callback per event, so fan out to our own listeners.
   const listeners = {};
-  for (const name of ['positionChanged', 'zoomChanged', 'rotationChanged', 'click']) {
+  for (const name of ['positionChanged', 'zoomChanged', 'rotationChanged', 'click', 'mouseMove']) {
     listeners[name] = [];
     aladin.on(name, (value) => listeners[name].forEach((fn) => fn(value)));
   }
@@ -153,6 +161,7 @@ export async function createSkyView(container, { ra, dec, fovDeg, rotation = 0, 
   let baseLayer = null;
   let cubePlane = null;
   const catalogues = {};
+  const wanted = {}; // latest request per catalogue, so a slow download can't reappear after unticking
   let coverage = null;
   const footprints = A.graphicOverlay({ color: '#00B5BC', lineWidth: 1, name: 'SPHEREx images' });
   aladin.addOverlay(footprints);
@@ -261,22 +270,44 @@ export async function createSkyView(container, { ra, dec, fovDeg, rotation = 0, 
     /**
      * Catalogue markers within a circle around (ra, dec). Loaded once per centre; turning
      * it off just hides it. (This Aladin version has no way to remove a catalogue.)
+     * @returns {Promise<{count?: number, service?: string, truncated?: boolean, error?: string}|null>}
      */
-    showCatalogue(key, visible, { ra: cra, dec: cdec, radiusDeg }) {
-      const where = `${cra.toFixed(4)} ${cdec.toFixed(4)}`;
+    async showCatalogue(key, visible, { ra: cra, dec: cdec, radiusDeg, live }) {
+      const radius = Math.min(radiusDeg, CATALOGUE_MAX_RADIUS_DEG);
+      const where = `${cra.toFixed(4)} ${cdec.toFixed(4)} ${radius.toFixed(3)}`;
+      wanted[key] = visible ? where : null;
       const existing = catalogues[key];
       if (existing && (existing.where !== where || !visible)) existing.layer.hide();
-      if (!visible) return;
+      if (!visible) return null;
       if (existing?.where === where) {
         existing.layer.show();
-        return;
+        return existing.info;
       }
       const spec = CATALOGUE_LAYERS[key];
-      const layer = A.catalogFromVizieR(spec.vizier, where, Math.min(radiusDeg, CATALOGUE_MAX_RADIUS_DEG), {
-        name: spec.label, color: spec.color, sourceSize: 10, shape: 'circle',
-      });
+      const style = { name: spec.label, color: spec.color, sourceSize: spec.size, shape: spec.shape };
+      let layer;
+      let info;
+      if (live) {
+        try {
+          const result = await getJson(`/api/catalogs/${key}`, { ra: cra.toFixed(6), dec: cdec.toFixed(6), radius: radius.toFixed(4) }, { timeoutMs: 90000 });
+          layer = A.catalog(style);
+          layer.addSources(result.rows.filter((row) => row.ra != null && row.dec != null)
+            .map((row) => A.source(row.ra, row.dec, { name: rowName(row) })));
+          info = { count: result.count, service: result.service, truncated: result.truncated };
+        } catch (error) {
+          if (!spec.vizier) return { error: error.message };
+        }
+      }
+      if (!layer) {
+        if (!spec.vizier) return { error: 'SIMBAD markers need the live data server.' };
+        layer = A.catalogFromVizieR(spec.vizier, `${cra.toFixed(4)} ${cdec.toFixed(4)}`, Math.min(radius, 0.25), style);
+        info = { service: 'VizieR (CDS)' };
+      }
+      if (wanted[key] !== where) return null; // unticked or moved while downloading
+      catalogues[key]?.layer.hide();
       aladin.addCatalog(layer);
-      catalogues[key] = { layer, where };
+      catalogues[key] = { layer, where, info };
+      return info;
     },
   };
 }

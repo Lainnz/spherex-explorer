@@ -5,15 +5,15 @@
  * SPHEREx coverage and image outlines, and Gaia / AllWISE catalogue markers.
  */
 import { BLANK_PLANES, CUBE_WAVELENGTHS, describePlane, planeForWavelength } from '../shared/wavelength.js';
-import { CATALOGUE_LAYERS, SKY_MAPS } from './sky-view.js';
+import { CATALOGUE_LAYERS, NO_SERVER_MAP, SKY_MAPS } from './sky-view.js';
 
 const DEFAULT_WAVELENGTH_UM = 2.2; // near-infrared "K band": stars stand out well
 
 /**
- * @param {{root: HTMLElement, sky: object, state: object, home: object,
+ * @param {{root: HTMLElement, sky: object, state: object, home: object, live: boolean,
  *          onChange: () => void}} options  state is updated in place (base, wl, overlay, opacity, cat)
  */
-export function setupLayers({ root, sky, state, home, onChange }) {
+export function setupLayers({ root, sky, state, home, live, onChange }) {
   const baseSelect = root.querySelector('#base-map');
   const wavelengthRow = root.querySelector('[data-wavelength-row]');
   const wavelengthSlider = root.querySelector('#wavelength');
@@ -23,9 +23,11 @@ export function setupLayers({ root, sky, state, home, onChange }) {
   const toggles = {
     coverage: root.querySelector('#show-coverage'),
     footprints: root.querySelector('#show-footprints'),
+    simbad: root.querySelector('#show-simbad'),
     gaia: root.querySelector('#show-gaia'),
     allwise: root.querySelector('#show-allwise'),
   };
+  const catalogueStatus = root.querySelector('[data-catalogue-status]');
 
   const mapNote = root.querySelector('[data-map-note]');
   // Grouped menus, so real SPHEREx maps and other telescopes' maps are never confused.
@@ -91,11 +93,27 @@ export function setupLayers({ root, sky, state, home, onChange }) {
   // --- Coverage, outlines, catalogues -----------------------------------------------------
   toggles.coverage.addEventListener('change', () => sky.showCoverage(toggles.coverage.checked));
   toggles.footprints.addEventListener('change', () => sky.showFootprints(toggles.footprints.checked));
-  const catalogueArea = () => ({ ra: home.ra, dec: home.dec, radiusDeg: Math.max(sky.fovDeg() / 2, 0.05) });
+  // Search a bit wider than the view (Elaine's rule), within the server's 0.5° limit.
+  const catalogueArea = () => ({ ra: home.ra, dec: home.dec, radiusDeg: Math.min(0.5, Math.max(0.02, sky.fovDeg() * 0.75)), live });
+  const statusText = {};
+  function showStatus() {
+    catalogueStatus.textContent = Object.values(statusText).filter(Boolean).join(' · ');
+  }
+  async function showCatalogue(key, visible) {
+    const spec = CATALOGUE_LAYERS[key];
+    statusText[key] = visible ? `${spec.label}: loading…` : '';
+    showStatus();
+    const info = await sky.showCatalogue(key, visible, catalogueArea());
+    if (!toggles[key].checked) return;
+    if (!info) statusText[key] = '';
+    else if (info.error) statusText[key] = `${spec.label}: ${info.error}`;
+    else statusText[key] = `${spec.label}: ${info.count != null ? `${info.count.toLocaleString()}${info.truncated ? '+' : ''} shown` : 'shown'} (${info.service})`;
+    showStatus();
+  }
   for (const key of Object.keys(CATALOGUE_LAYERS)) {
     toggles[key].addEventListener('change', () => {
       state.cat = Object.keys(CATALOGUE_LAYERS).filter((k) => toggles[k].checked);
-      sky.showCatalogue(key, toggles[key].checked, catalogueArea());
+      showCatalogue(key, toggles[key].checked);
       onChange();
     });
   }
@@ -111,13 +129,31 @@ export function setupLayers({ root, sky, state, home, onChange }) {
   opacitySlider.disabled = !state.overlay;
   for (const key of state.cat ?? []) {
     toggles[key].checked = true;
-    sky.showCatalogue(key, true, catalogueArea());
+    showCatalogue(key, true);
   }
 
   return {
+    /**
+     * Elaine's "match the background to this wavelength": show the SPHEREx 102-colour map at
+     * the colour a frame saw, so the sharp frame and the sky behind it are the same colour.
+     */
+    async matchWavelength(um) {
+      const next = planeForWavelength(um);
+      if (state.base === NO_SERVER_MAP && next === plane) return;
+      plane = next;
+      state.wl = CUBE_WAVELENGTHS[plane];
+      showPlane();
+      if (state.base !== NO_SERVER_MAP) {
+        state.base = NO_SERVER_MAP;
+        await applyBase();
+      } else {
+        sky.setPlane(plane);
+      }
+      onChange();
+    },
     /** After "set as new coordinate": reload catalogues around the new spot. */
     refreshCatalogues() {
-      for (const key of state.cat ?? []) sky.showCatalogue(key, true, catalogueArea());
+      for (const key of state.cat ?? []) showCatalogue(key, true);
     },
   };
 }

@@ -1,10 +1,9 @@
 # Integration: Elaine's demo + Alice's demo → SPHEREx Xplorer
 
 Branch: `elaine-demo-integration`. Base: **Alice's demo** (Vite + plain JavaScript website,
-FastAPI data server). Elaine's features are ported in. Elaine's original code stays in
-`claude-demo/` (her latest copy, from `D:\Projects\SPHEREx-Xplorer`, is the source used for
-porting) until Milestone 2 is done, then it is removed. It's still on the `elaine-demo`
-branch.
+FastAPI data server). Elaine's features are ported in from her latest copy
+(`D:\Projects\SPHEREx-Xplorer`). Her original Next.js demo was removed from this branch in
+Milestone 2; it's still on the `elaine-demo` branch.
 
 ## What the final product looks like
 - **Title page:** Alice's, unchanged (3D night Earth, star-name search, Randomize, featured
@@ -43,9 +42,14 @@ branch.
 | Tests | — | Frontend (vitest) and backend (pytest, offline fixtures) | **Alice**, extended for ported features |
 
 ## Milestones
-1. **Foundation** (this one): branch, merge, one backend, Alice's title page, Explore opens on
+1. **Foundation** (done): branch, merge, one backend, Alice's title page, Explore opens on
    Elaine's false-colour map with a switch to Alice's maps, this comparison.
-2. **Feature merge:** everything marked M2 above; remove `claude-demo/` once ported.
+2. **Feature merge** (done): cursor coordinates; SIMBAD/Gaia/AllWISE markers through the
+   data server with per-catalogue status; AllWISE infrared section in the object popup;
+   "At target" brightness and "Same colour" playback in the time bar; σ significance map
+   and quality numbers after a visit-minus-visit Difference (`/api/significance`); spectral
+   feature markers, points table and limits in the Spectrum tab; "match the sky map to the
+   frame's colour"; Guide tab. `claude-demo/` removed.
 3. **New features:** search by chemistry (water ice, CO₂, CO, carbon/PAH, organics,
    "signs of pre-life") from a curated list of published targets, with a live SPHEREx
    check of band depth; "Why SPHEREx Xplorer" (data visualised, extra information,

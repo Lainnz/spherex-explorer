@@ -1,1 +1,0 @@
-{"obs_id": "2026W11_1A_0300_4", "band": "SPHEREx-D2", "time_utc": "2026-03-10T12:17:49Z", "time_mjd": 61109.512373, "wavelength_um": 1.3445, "bandwidth_um": 0.0323, "usable": false, "reason": "too many flagged pixels in the aperture", "masked_fraction": 0.077, "flags_in_aperture": ["OVERFLOW", "SOURCE"]}

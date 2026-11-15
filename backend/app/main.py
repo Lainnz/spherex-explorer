@@ -30,7 +30,7 @@ from .irsa import IrsaUnavailable
 from .objects import fast_movers, identify
 from .observations import find_observations, recall_image
 from .photometry import photometry_stream
-from .products import STACK_METHODS, difference, load_product, product_id, products_dir, save_product
+from .products import STACK_METHODS, difference, load_product, product_id, products_dir, save_product, significance
 from .random_pool import keep_warm, take_spot
 from .random_target import random_target
 from .render import percent_stretch, stretch_to_unit, to_f32, to_fits, to_png
@@ -404,6 +404,40 @@ async def make_difference(request: DifferenceRequest):
     }
     await run_in_threadpool(save_product, pid, image, variance, meta)
     return _result_message(pid, meta, image)
+
+
+@app.post("/api/significance")
+async def make_significance(request: DifferenceRequest):
+    """A − B in standard deviations (σ), with Elaine's quality checks: is a change real?"""
+    loaded = await run_in_threadpool(_load_matching, [request.a, request.b])
+    if isinstance(loaded, JSONResponse):
+        return loaded
+    (image_a, var_a, meta_a), (image_b, var_b, meta_b) = loaded
+    sigma, summary = significance(image_a, var_a, image_b, var_b, request.normalize)
+    pid = product_id({"kind": "significance", "a": request.a, "b": request.b, "normalize": request.normalize})
+    meta = {
+        **{k: meta_a[k] for k in ("width", "height", "wcs")},
+        "unit": "σ",
+        "label": f"Significance (σ): {meta_a['label']} − {meta_b['label']}",
+        "detectors": sorted(set(meta_a.get("detectors", [])) | set(meta_b.get("detectors", []))),
+        "t_mid": meta_a["t_mid"],
+    }
+    await run_in_threadpool(save_product, pid, sigma, np.ones_like(sigma), meta)
+    days = abs(float(meta_a["t_mid"]) - float(meta_b["t_mid"]))
+    wavelengths = [m.get("wavelength_um") for m in (meta_a, meta_b)]
+    return json_safe({
+        **_result_message(pid, meta, sigma),
+        "summary": {
+            **summary,
+            "days_between": round(days, 1),
+            "wavelength_difference_um": round(abs(wavelengths[0] - wavelengths[1]), 4) if None not in wavelengths else None,
+        },
+        "method": (
+            "Each pixel's change divided by its expected uncertainty: both images' pixel noise plus "
+            f"{round(summary['systematic_fraction'] * 100)}% of the local brightness for star-shape and "
+            "alignment differences. |σ| > 5 is very unlikely to be noise."
+        ),
+    })
 
 
 class CompositeRequest(BaseModel):

@@ -16,6 +16,7 @@ export function createSequence(initialDisplay) {
   let visits = [];
   let grid = null; // the frames' grid centre and size (from the "start" message)
   let band = 'all';
+  let lock = null; // {um, tolerance}: only frames at this SPHEREx colour (timeline.js)
   let time = null;
   let pinned = null; // an operation result shown instead of the time sequence
   let display = { ...initialDisplay }; // {cmap, stretch, trim, linear, fixedMin, fixedMax}
@@ -25,11 +26,11 @@ export function createSequence(initialDisplay) {
   const notify = (what) => listeners.forEach((fn) => fn(what));
 
   function playlist() {
-    return buildPlaylist(frames, band);
+    return buildPlaylist(frames, band, lock);
   }
 
   function rangeFor(frame) {
-    if (frame.kind === 'difference') return symmetricRange(frame.data, display.trim);
+    if (frame.kind === 'difference' || frame.kind === 'significance') return symmetricRange(frame.data, display.trim);
     if (frame.kind) return percentRange([frame.data], display.trim); // other results: own range
     if (display.stretch === 'fixed' && Number.isFinite(display.fixedMin) && display.fixedMax > display.fixedMin) {
       return [display.fixedMin, display.fixedMax];
@@ -54,7 +55,7 @@ export function createSequence(initialDisplay) {
     } else {
       const [vmin, vmax] = rangeFor(frame);
       bitmap = await renderBitmap(frame.data, frame.width, frame.height, {
-        vmin, vmax, softening: settings.linear, cmap: frame.kind === 'difference' ? 'gray' : settings.cmap,
+        vmin, vmax, softening: settings.linear, cmap: frame.kind === 'difference' || frame.kind === 'significance' ? 'gray' : settings.cmap,
       });
     }
     if (settings !== display) return bitmapFor(frame); // settings changed meanwhile
@@ -117,6 +118,14 @@ export function createSequence(initialDisplay) {
     band: () => band,
     setBand(next) {
       band = next;
+      const list = playlist();
+      if (list.length && time !== null) time = frameAt(list, time).t_mid;
+      notify('band');
+    },
+    wavelengthLock: () => lock,
+    /** Play only frames at this colour (null = all colours). */
+    setWavelengthLock(next) {
+      lock = next;
       const list = playlist();
       if (list.length && time !== null) time = frameAt(list, time).t_mid;
       notify('band');

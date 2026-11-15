@@ -46,7 +46,6 @@ python scripts\build_demo_data.py
 | `frontend/` | The website (Vite, plain JavaScript): title page + Stellar View |
 | `backend/` | The data server (Python, FastAPI, Astropy) |
 | `backend/app/skytools/` | Elaine's sky tools: SPHEREx false-colour map, timelines, comparisons, spectra, catalogue overlays |
-| `claude-demo/` | Elaine's original demo, kept for reference until everything is ported (Milestone 2) |
 | `config/datasets.json` | Which SPHEREx releases and sky maps to use (one file to update) |
 | `brand/` | Team logos (originals; web copies are made by `scripts/build_brand.py`) |
 | `docs/` | Notes on the data, deployment and updates |

@@ -104,6 +104,47 @@ def white_merge(images: list[np.ndarray], variances: list[np.ndarray]) -> tuple[
     return merged, variance
 
 
+# Elaine's comparison rule: besides pixel noise, allow 10% of the local brightness for what
+# noise doesn't capture (undersampled stars, slightly different star shapes, sub-pixel
+# alignment), so every bright star doesn't look like a "significant" change.
+SYSTEMATIC_FRACTION = 0.10
+
+
+def significance(
+    image_a: np.ndarray, variance_a: np.ndarray, image_b: np.ndarray, variance_b: np.ndarray, normalize: bool
+) -> tuple[np.ndarray, dict]:
+    """How many standard deviations (σ) each pixel changed between A and B, plus checks.
+
+    Returns the σ map and a summary: usable pixels, the noise check (the spread of the σ map
+    should be about 1 if the noise estimate is right), and how many pixels changed by more
+    than 5σ (real changes, or movers).
+    """
+    diff, variance = difference(image_a, variance_a, image_b, variance_b, normalize)
+    brightness = np.fmax(np.abs(image_a), np.abs(image_b))
+    total = variance + (SYSTEMATIC_FRACTION * brightness) ** 2
+    with np.errstate(invalid="ignore", divide="ignore"):
+        sigma = np.where(total > 0, diff / np.sqrt(total), np.nan)
+    good = np.isfinite(sigma)
+    usable = int(good.sum())
+    values = sigma[good]
+    if usable:
+        median = float(np.median(values))
+        # Robust spread: 1.4826 × median absolute deviation equals σ for Gaussian noise.
+        spread = float(1.4826 * np.median(np.abs(values - median)))
+        over5 = int(np.sum(np.abs(values) > 5))
+    else:
+        spread, over5 = float("nan"), 0
+    summary = {
+        "usable_pixels": usable,
+        "total_pixels": int(sigma.size),
+        "noise_check": round(spread, 3) if np.isfinite(spread) else None,
+        "pixels_over_5_sigma": over5,
+        "fraction_over_5_sigma": round(over5 / usable, 5) if usable else None,
+        "systematic_fraction": SYSTEMATIC_FRACTION,
+    }
+    return sigma.astype(np.float32), summary
+
+
 def difference(
     image_a: np.ndarray, variance_a: np.ndarray, image_b: np.ndarray, variance_b: np.ndarray, normalize: bool
 ) -> tuple[np.ndarray, np.ndarray]:

@@ -25,16 +25,50 @@ export function loadChart() {
 }
 
 /**
+ * Dashed vertical lines with labels at known spectral features (options.plugins.featureLines:
+ * {show, features: [{um, label, colour}]}). Drawn by hand so no extra package is needed.
+ */
+const featureLines = {
+  id: 'featureLines',
+  afterDatasetsDraw(chart, _args, options) {
+    if (!options?.show || !options.features?.length) return;
+    const { ctx, chartArea, scales: { x } } = chart;
+    ctx.save();
+    ctx.setLineDash([4, 4]);
+    ctx.lineWidth = 1;
+    ctx.font = '10px "Exo 2 Variable", "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    options.features.forEach((feature, index) => {
+      if (feature.um < x.min || feature.um > x.max) return;
+      const px = x.getPixelForValue(feature.um);
+      // Alternate label heights so neighbours (3.05 / 3.29 / 3.4 µm) don't overlap.
+      const labelY = chartArea.top + 10 + (index % 2) * 11;
+      ctx.strokeStyle = feature.colour;
+      ctx.globalAlpha = 0.75;
+      ctx.beginPath();
+      ctx.moveTo(px, labelY + 3);
+      ctx.lineTo(px, chartArea.bottom);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = feature.colour;
+      ctx.fillText(feature.label, px, labelY);
+    });
+    ctx.restore();
+  },
+};
+
+/**
  * A scatter chart with error bars.
  * @param {HTMLCanvasElement} canvas
  * @param {{xLabel: string, yLabel: string, xTicks?: (value: number) => string,
- *          tooltip: (point: object) => string}} options
+ *          tooltip: (point: object) => string, features?: object[]}} options
  */
-export async function createScatter(canvas, { xLabel, yLabel, xTicks, tooltip }) {
+export async function createScatter(canvas, { xLabel, yLabel, xTicks, tooltip, features }) {
   const Chart = await loadChart();
   return new Chart(canvas, {
     type: 'scatterWithErrorBars',
     data: { datasets: [] },
+    plugins: features ? [featureLines] : [],
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -45,6 +79,7 @@ export async function createScatter(canvas, { xLabel, yLabel, xTicks, tooltip })
       plugins: {
         legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } },
         tooltip: { callbacks: { label: (context) => tooltip(context.raw) } },
+        ...(features ? { featureLines: { show: true, features } } : {}),
       },
     },
   });

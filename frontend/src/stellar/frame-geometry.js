@@ -25,6 +25,51 @@ export function tanPixelToSky(wcs, x, y) {
 }
 
 /**
+ * FITS pixel (0-based x, y) of a sky position in a TAN grid: the inverse of tanPixelToSky.
+ * Returns null for positions on the far side of the sky from the grid.
+ */
+export function skyToTanPixel(wcs, raDeg, decDeg) {
+  const ra = raDeg * DEG;
+  const dec = decDeg * DEG;
+  const ra0 = wcs.CRVAL1 * DEG;
+  const dec0 = wcs.CRVAL2 * DEG;
+  const cosC = Math.sin(dec0) * Math.sin(dec) + Math.cos(dec0) * Math.cos(dec) * Math.cos(ra - ra0);
+  if (cosC <= 0) return null;
+  const xi = (Math.cos(dec) * Math.sin(ra - ra0)) / cosC;
+  const eta = (Math.cos(dec0) * Math.sin(dec) - Math.sin(dec0) * Math.cos(dec) * Math.cos(ra - ra0)) / cosC;
+  return { x: xi / (wcs.CDELT1 * DEG) + wcs.CRPIX1 - 1, y: eta / (wcs.CDELT2 * DEG) + wcs.CRPIX2 - 1 };
+}
+
+/**
+ * A frame's value at a sky position: the median of the 3×3 pixels around it (so one bad
+ * or noisy pixel can't decide it), or null if the spot is outside the frame or blank.
+ * Frame pictures have row 0 at the top (north), so FITS row y is image row height − 1 − y.
+ * @param {{data: Float32Array|number[], width: number, height: number, wcs: object}} frame
+ */
+export function valueAt(frame, raDeg, decDeg) {
+  if (!frame?.wcs || !frame.data) return null;
+  const pixel = skyToTanPixel(frame.wcs, raDeg, decDeg);
+  if (!pixel) return null;
+  const column = Math.round(pixel.x);
+  const row = frame.height - 1 - Math.round(pixel.y);
+  if (column < 0 || row < 0 || column >= frame.width || row >= frame.height) return null;
+  const values = [];
+  for (let dy = -1; dy <= 1; dy += 1) {
+    for (let dx = -1; dx <= 1; dx += 1) {
+      const c = column + dx;
+      const r = row + dy;
+      if (c < 0 || r < 0 || c >= frame.width || r >= frame.height) continue;
+      const value = frame.data[r * frame.width + c];
+      if (Number.isFinite(value)) values.push(value);
+    }
+  }
+  if (!values.length) return null;
+  values.sort((a, b) => a - b);
+  const middle = Math.floor(values.length / 2);
+  return values.length % 2 ? values[middle] : (values[middle - 1] + values[middle]) / 2;
+}
+
+/**
  * Sky positions of the outer corners of a frame's top-left, top-right and bottom-left
  * pixels (as drawn, north up): enough to map the picture onto the screen.
  */

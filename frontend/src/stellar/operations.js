@@ -3,7 +3,12 @@
  * one-click "Find moving objects". They run in the browser's Web Worker on frames
  * already downloaded, so there's no waiting for the server. Results appear in the
  * filmstrip with a badge.
+ *
+ * With the data server, a visit-minus-visit Difference also gets Elaine's significance map
+ * (change ÷ expected noise, in σ) and quality numbers, so you can tell a real change from noise.
  */
+import { API_BASE } from '../shared/api.js';
+import { fetchFloat32 } from './frames-source.js';
 import { mjdToDate } from './timeline.js';
 import { difference, stack } from './worker-client.js';
 
@@ -17,9 +22,10 @@ const resultFrom = (frame, extra) => ({
 
 /**
  * @param {{root: HTMLElement, sequence: object, state: object, toast: (text: string, kind?: string) => void,
- *          onStateChange: () => void}} options
+ *          onStateChange: () => void, live?: boolean}} options
  */
-export function setupOperations({ root, sequence, state, toast, onStateChange }) {
+export function setupOperations({ root, sequence, state, toast, onStateChange, live = false }) {
+  const diffStats = root.querySelector('[data-diff-stats]');
   const buttons = [...root.querySelectorAll('[data-op]')];
   const sections = [...root.querySelectorAll('[data-op-section]')];
   const visitA = root.querySelector('#visit-a');
@@ -107,6 +113,42 @@ export function setupOperations({ root, sequence, state, toast, onStateChange })
       label: `Difference · D${detector}: visit ${aVisit} (${mjdToDate(a.t_mid)}) − ${bLabel}. ` +
         'Movers show as black/white pairs.',
     }));
+    diffStats.hidden = true;
+    if (bVisit !== 'template' && live) await makeSignificance(a, frameOfVisit(detector, bVisit), detector);
+  }
+
+  /** Elaine's check: how many σ did each pixel change, and does the noise estimate hold? */
+  async function makeSignificance(a, b, detector) {
+    diffStats.hidden = false;
+    diffStats.innerHTML = '<p class="note small">Checking which changes are real (significance map)…</p>';
+    const response = await fetch(`${API_BASE}/api/significance`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ a: a.id, b: b.id, normalize: normalize.checked }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      diffStats.innerHTML = `<p class="note small">No significance map: ${body.message ?? 'the data server could not make it'}.</p>`;
+      return;
+    }
+    const data = await fetchFloat32(`${API_BASE}${body.f32_url}`, undefined, a.width * a.height);
+    sequence.addResult(resultFrom(a, {
+      kind: 'significance', badge: 'σ', data, unit: 'σ',
+      label: `Significance · D${detector}: visit ${a.visit} − visit ${b.visit}, in σ. White/black spots beyond ±5σ are real changes.`,
+    }));
+    const m = body.summary;
+    const percent = (x) => (x == null ? '–' : `${(x * 100).toFixed(2)}%`);
+    const noiseNote = m.noise_check == null ? '' : m.noise_check < 0.7 ? ' (noise over-estimated: changes are understated)'
+      : m.noise_check > 1.4 ? ' (more scatter than expected: treat small changes with care)' : ' (good)';
+    diffStats.innerHTML = `
+      <h4 class="popup-subhead">Measurements and quality</h4>
+      <dl class="info-list">
+        <dt>Time between</dt><dd>${m.days_between} days</dd>
+        ${m.wavelength_difference_um != null ? `<dt>Colour difference</dt><dd>${m.wavelength_difference_um.toFixed(3)} µm</dd>` : ''}
+        <dt>Usable pixels</dt><dd>${m.usable_pixels.toLocaleString()} of ${m.total_pixels.toLocaleString()}</dd>
+        <dt>Noise check</dt><dd>${m.noise_check ?? '–'}${noiseNote} <span class="note">(≈ 1 is right)</span></dd>
+        <dt>Changed by &gt; 5σ</dt><dd>${m.pixels_over_5_sigma.toLocaleString()} pixels (${percent(m.fraction_over_5_sigma)})</dd>
+      </dl>
+      <p class="note small">${body.method}</p>`;
   }
 
   function makeComposite() {

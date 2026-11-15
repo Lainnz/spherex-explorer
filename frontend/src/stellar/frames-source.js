@@ -7,7 +7,8 @@
  */
 import { API_BASE, FriendlyError } from '../shared/api.js';
 
-async function fetchFloat32(url, signal, expectedLength) {
+/** Download a frame's raw numbers (32-bit floats). Also used for significance maps. */
+export async function fetchFloat32(url, signal, expectedLength) {
   const response = await fetch(url, { signal });
   if (!response.ok) throw new Error(`Couldn't download ${url}`);
   const data = new Float32Array(await response.arrayBuffer());
