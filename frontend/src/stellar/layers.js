@@ -93,6 +93,8 @@ export function setupLayers({ root, sky, state, home, live, onChange }) {
   // --- Coverage, outlines, catalogues -----------------------------------------------------
   toggles.coverage.addEventListener('change', () => sky.showCoverage(toggles.coverage.checked));
   toggles.footprints.addEventListener('change', () => sky.showFootprints(toggles.footprints.checked));
+  // Outlines start hidden (they cross the middle of the view); the checkbox shows them.
+  sky.showFootprints(toggles.footprints.checked);
   // Search a bit wider than the view (Elaine's rule), within the server's 0.5° limit.
   const catalogueArea = () => ({ ra: home.ra, dec: home.dec, radiusDeg: Math.min(0.5, Math.max(0.02, sky.fovDeg() * 0.75)), live });
   const statusText = {};
