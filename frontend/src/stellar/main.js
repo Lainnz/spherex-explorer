@@ -12,16 +12,25 @@ import { getHealth, getJson } from '../shared/api.js';
 import datasets from '../shared/config.js';
 import { formatDec, formatRa } from '../shared/coords.js';
 import { loadDemo } from '../shared/demo.js';
+import { viewPosition } from '../shared/motion.js';
 import { findFeatured } from '../shared/targets.js';
 import { buildStellarUrl, readStellarState, stellarParams } from '../shared/url-state.js';
 import { randomDestination } from '../title/randomize.js';
 import { resolveQuery } from '../title/search.js';
 import { setupControlPanel } from './control-panel.js';
+import { setupDisplayPanel } from './display-panel.js';
 import { setupSharing } from './embed.js';
+import { createFrameOverlay } from './frame-overlay.js';
+import { setupFramePlayer } from './frame-player.js';
+import { loadFrames } from './frames-source.js';
 import { setupLayers } from './layers.js';
 import { parseRegion } from './nav-math.js';
 import { setupNavTools } from './nav-tools.js';
+import { setupOperations } from './operations.js';
+import { createSequence } from './sequence.js';
 import { createSkyView, SKY_MAPS } from './sky-view.js';
+import { setupTimeBar } from './time-bar.js';
+import { dateToMjd } from './timeline.js';
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const limits = datasets.limits;
@@ -44,6 +53,14 @@ function toast(text, kind = 'info', seconds = 6) {
   element.textContent = text;
   $('[data-toasts]').append(element);
   setTimeout(() => element.remove(), seconds * 1000);
+}
+
+/** Show a server warning (e.g. "QR3 isn't answering") once, however many requests carry it. */
+const shownWarnings = new Set();
+function warnOnce(text) {
+  if (!text || shownWarnings.has(text)) return;
+  shownWarnings.add(text);
+  toast(text, 'warning', 12);
 }
 
 const ICONS = { binoculars: Binoculars, shuffle: Shuffle, link: Link, code: Code };
@@ -93,11 +110,12 @@ async function resolvePlace(live) {
   if (Number.isFinite(state.ra)) {
     return { ra: state.ra, dec: state.dec, name: featured?.name ?? state.target, featured };
   }
-  if (featured) return { ra: featured.ra, dec: featured.dec, name: featured.name, featured };
+  // Fast movers: point at where they are now (shared/motion.js).
+  if (featured) return { ...viewPosition(featured), name: featured.name, featured };
   if (state.target && live) {
     try {
       const found = await getJson('/api/resolve', { name: state.target });
-      return { ra: found.ra, dec: found.dec, name: found.name };
+      return { ...viewPosition(found), name: found.name, motion: found.motion };
     } catch (error) {
       toast(error.message, 'warning');
     }
@@ -106,7 +124,7 @@ async function resolvePlace(live) {
   }
   const fallback = findFeatured('barnards-star');
   if (!state.target) toast("No coordinate in the address, so here's Barnard's Star.", 'info');
-  return { ra: fallback.ra, dec: fallback.dec, name: fallback.name, featured: fallback };
+  return { ...viewPosition(fallback), name: fallback.name, featured: fallback };
 }
 
 // --- SPHEREx image outlines (and the image list Phase 8 will play) --------------------------
@@ -128,6 +146,8 @@ async function loadObservations(sky, place, live) {
       show(fromRows(observations.observations));
       const releases = [...new Set(observations.observations.map((o) => o.release.toUpperCase()))].join(' + ');
       status.textContent = `${observations.total_available} SPHEREx images in ${observations.visits.length} visits (${releases}).`;
+      if (observations.warning) status.textContent += ' Some data is missing for now (see message).';
+      warnOnce(observations.warning);
       return;
     } catch (error) {
       status.textContent = error.message;
@@ -142,6 +162,134 @@ async function loadObservations(sky, place, live) {
   } else if (!live) {
     status.textContent = 'The live data server is asleep, so only the all-sky map is shown here. Featured targets have saved data.';
   }
+}
+
+// --- The image sequence (Phase 8) -----------------------------------------------------------------
+/**
+ * Set up the time bar, display controls, operations and frame overlay, and return a
+ * function that (re)loads the frames for the current coordinate and settings.
+ */
+function setupSequence({ sky, place, live, home }) {
+  const sequence = createSequence({ cmap: state.cmap, stretch: state.stretch, trim: state.trim, linear: state.linear });
+  if (state.det?.length === 1) sequence.setBand(String(state.det[0]));
+  const overlay = createFrameOverlay({ container: $('#sky'), sky, sequence, reducedMotion });
+  if (import.meta.env.DEV) Object.assign(window, { __sequence: sequence, __overlay: overlay }); // debugging only
+  const motion = place.featured?.motion ?? place.motion;
+  if (motion) overlay.setTarget({ name: place.featured?.name ?? place.name ?? 'Target', motion });
+
+  let operations = null;
+  const timeBar = setupTimeBar({
+    root: $('.time-bar'), sequence, state, onStateChange: writeUrl, getBlinkPair: () => operations?.blinkPair(),
+  });
+  setupDisplayPanel({ root: $('.control-panel'), sequence, state, overlay, onStateChange: writeUrl, onReload: () => load() });
+  operations = setupOperations({ root: $('.control-panel'), sequence, state, toast, onStateChange: writeUrl });
+  setupFramePlayer({ panel: $('[data-frame-player]'), toggle: $('#player-toggle'), sequence });
+
+  // The slider's date and the Band choice go into the address (not every frame of playback).
+  sequence.onChange((what) => {
+    if (what === 'time' && !timeBar.isPlaying()) writeUrl();
+    if (what === 'band') {
+      state.det = sequence.band() === 'all' ? undefined : [Number(sequence.band())];
+      writeUrl();
+    }
+  });
+
+  let controller = null;
+  let firstLoad = true;
+
+  async function loadMovers() {
+    if (!live) return;
+    try {
+      const radius = Math.min(0.5, Math.max(0.02, (state.fov / 3600) * 0.75));
+      const { movers } = await getJson('/api/movers', { ra: home.ra, dec: home.dec, radius });
+      overlay.setMovers(movers);
+    } catch {
+      overlay.setMovers([]); // markers are a bonus; the frames still play
+    }
+  }
+
+  async function load() {
+    controller?.abort();
+    controller = new AbortController();
+    const { signal } = controller;
+    timeBar.setPlaying(false);
+    sequence.reset();
+    timeBar.setProgress('Getting SPHEREx images…');
+    loadMovers();
+
+    const atTarget = place.featured && home.ra === place.ra && home.dec === place.dec;
+    const request = {
+      ra: home.ra, dec: home.dec, fov_arcsec: state.fov, mode: state.mode,
+      ...(atTarget ? { target: place.featured.slug } : {}),
+      ...(state.release ? { releases: state.release } : {}),
+      ...(state.det && state.det.length > 1 ? { detectors: state.det } : {}),
+    };
+    let demo = null;
+    if (!live && atTarget) {
+      demo = await loadDemo(place.featured.slug);
+      if (demo && state.mode !== 'epoch') toast('Saved demo data has per-visit frames only.', 'warning');
+    }
+
+    let total = 0;
+    let ready = 0;
+    const attempt = (useLive) => loadFrames({
+      live: useLive, request, demo, signal,
+      onStart: (start) => {
+        total = start.frames_total;
+        warnOnce(start.warning);
+        sequence.setVisits(start.visits ?? []);
+        const downloads = start.images_to_download;
+        timeBar.setProgress(downloads
+          ? `Downloading ${downloads} image pieces (≈${Math.round(start.estimated_download_mb)} MB) from NASA… the first time can take a few minutes.`
+          : `Preparing ${total} frames…`);
+      },
+      onFrame: (frame) => {
+        sequence.addFrame(frame);
+        ready += 1;
+        timeBar.setProgress(`${ready} of ${total} frames ready`);
+      },
+      onProgress: () => {},
+      onDone: (done) => {
+        const failed = done.images_failed ? ` (${done.images_failed} images couldn't be used)` : '';
+        timeBar.setProgress(`${ready} frames${failed} · ${demo && !useLive ? `saved demo data from ${demo.built}` : 'live from NASA IRSA'}`);
+      },
+    });
+
+    try {
+      try {
+        await attempt(live);
+      } catch (error) {
+        if (signal.aborted) return;
+        // Live failed: fall back to saved data for featured targets.
+        if (live && atTarget && (demo ??= await loadDemo(place.featured.slug))) {
+          toast(`${error.message} Showing saved demo data instead.`, 'warning', 9);
+          sequence.reset();
+          ready = 0;
+          await attempt(false);
+        } else {
+          throw error;
+        }
+      }
+    } catch (error) {
+      if (signal.aborted) return;
+      timeBar.setProgress(error.message);
+      return;
+    }
+    if (signal.aborted) return;
+
+    // Start where the address says, then get every picture ready for smooth playback.
+    const startTime = firstLoad && state.t ? dateToMjd(state.t) : null;
+    if (startTime !== null) sequence.setTime(startTime);
+    else if (sequence.playlist().length) sequence.setTime(sequence.playlist()[0].t_mid);
+    await sequence.prepareAll();
+    if (firstLoad) {
+      await operations.applyFromUrl();
+      if (state.autoplay) timeBar.setPlaying(true);
+    }
+    firstLoad = false;
+  }
+
+  return { load };
 }
 
 // --- Start ---------------------------------------------------------------------------------------
@@ -184,6 +332,7 @@ async function main() {
     return;
   }
   sky.setTarget(home.ra, home.dec);
+  if (import.meta.env.DEV) window.__sky = sky; // for debugging in the browser console only
 
   const layers = setupLayers({ root: $('.drawer'), sky, state, home, onChange: writeUrl });
   // Lift the "Loading the sky…" cover once the map is on screen (or after 15 s regardless).
@@ -210,8 +359,10 @@ async function main() {
       writeUrl();
       toast('New coordinate set. Loading SPHEREx images…');
       loadObservations(sky, { ra: here.ra, dec: here.dec }, live);
+      images.load();
     },
   });
+  const images = setupSequence({ sky, place, live, home });
   sharing = setupSharing({
     embed: Boolean(state.embed),
     copyButton: $('#copy-link'),
@@ -238,6 +389,7 @@ async function main() {
   }
   writeUrl();
   loadObservations(sky, place, live);
+  images.load();
 
   // Searching from the header opens a new Stellar View.
   const searchInput = $('#header-search-input');

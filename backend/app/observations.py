@@ -69,7 +69,7 @@ async def find_observations(
     """The images covering a position, grouped into visits. See PLAN.md §7.2."""
     releases = {rid: datasets["releases"][rid] for rid in release_ids}
     search_ra, search_dec = search_position(ra, dec, motion)
-    rows = await irsa.search_releases(releases, search_ra, search_dec, SEARCH_RADIUS_DEG)
+    rows, failed = await irsa.search_releases(releases, search_ra, search_dec, SEARCH_RADIUS_DEG)
 
     priorities = {rid: release["priority"] for rid, release in releases.items()}
     rows = [
@@ -116,4 +116,20 @@ async def find_observations(
         "estimated_download_mb": round(len(rows) * datasets["limits"]["cutout_mb_estimate"], 1),
         "visits": visits,
         "observations": rows,
+        "unavailable_collections": failed,
+        "warning": missing_data_warning(failed, releases),
     }
+
+
+def missing_data_warning(failed: list[str], releases: dict[str, dict]) -> str | None:
+    """Plain words for collections IRSA didn't answer for, e.g. "QR3 and QR3 Deep"."""
+    if not failed:
+        return None
+    names = []
+    for release_id, release in releases.items():
+        for survey, collection in release["sia_collections"].items():
+            if collection in failed:
+                names.append(release_id.upper() + (" Deep" if survey == "deep" else ""))
+    listed = " and ".join(names) if len(names) <= 2 else ", ".join(names[:-1]) + " and " + names[-1]
+    return (f"NASA's archive isn't answering for {listed} right now, so those images are missing. "
+            "Showing the rest; reload in a few minutes to try again.")

@@ -23,7 +23,7 @@ from .flags import flag_summary
 from .frames import FrameOptions, frame_stream, grid_center
 from .grid import make_grid, to_grid
 from .irsa import IrsaUnavailable
-from .objects import identify
+from .objects import fast_movers, identify
 from .observations import find_observations, recall_image
 from .photometry import photometry_stream
 from .products import STACK_METHODS, difference, load_product, product_id, products_dir, save_product
@@ -70,6 +70,13 @@ def friendly_error(status: int, error: str, message: str) -> JSONResponse:
 IRSA_DOWN = (503, "irsa_unavailable", "NASA's image archive (IRSA) isn't answering right now. Please try again in a few minutes.")
 SIMBAD_DOWN = (503, "resolver_unavailable", "The star-name service (SIMBAD) isn't answering right now. Try typing coordinates instead.")
 NO_COVERAGE = (404, "no_coverage", "SPHEREx hasn't observed this spot yet in the chosen releases and dates.")
+
+
+def no_images_error(result: dict) -> tuple[int, str, str]:
+    """No images found: either truly none, or the collections that might have them didn't answer."""
+    if result.get("unavailable_collections"):
+        return 503, "irsa_partly_unavailable", result["warning"].replace("Showing the rest; reload", "Please reload")
+    return NO_COVERAGE
 
 
 @app.get("/api/health")
@@ -210,7 +217,7 @@ async def observations(
     except IrsaUnavailable:
         return friendly_error(*IRSA_DOWN)
     if result["total_available"] == 0:
-        return friendly_error(*NO_COVERAGE)
+        return friendly_error(*no_images_error(result))
     return result
 
 
@@ -253,7 +260,7 @@ async def frames(request: FramesRequest):
     except IrsaUnavailable:
         return friendly_error(*IRSA_DOWN)
     if found["total_available"] == 0:
-        return friendly_error(*NO_COVERAGE)
+        return friendly_error(*no_images_error(found))
 
     datasets = search["datasets"]
     options = FrameOptions(
@@ -444,7 +451,7 @@ async def photometry(request: PhotometryRequest):
     except IrsaUnavailable:
         return friendly_error(*IRSA_DOWN)
     if found["total_available"] == 0:
-        return friendly_error(*NO_COVERAGE)
+        return friendly_error(*no_images_error(found))
 
     datasets = search["datasets"]
     rows = found["observations"]
@@ -480,6 +487,21 @@ async def object_info(
         return json_safe(await run_in_threadpool(identify, ra, dec, radius, mjd))
     except ResolverUnavailable:
         return friendly_error(503, "catalogues_unavailable", "SIMBAD and Gaia aren't answering right now. Try again soon.")
+
+
+@app.get("/api/movers")
+async def movers(
+    ra: float = Query(ge=0, lt=360),
+    dec: float = Query(ge=-90, le=90),
+    radius: float = Query(0.1, gt=0, le=0.5, description="Radius in degrees"),
+    min_pm: float = Query(100, ge=20, description="Slowest motion to include, mas/yr"),
+):
+    """Gaia stars here that move noticeably, with their motion, so the time slider can
+    slide their markers to where they were on each date."""
+    try:
+        return {"movers": json_safe(await run_in_threadpool(fast_movers, ra, dec, radius, min_pm))}
+    except Exception:
+        return friendly_error(503, "catalogues_unavailable", "Gaia isn't answering right now, so moving stars can't be marked.")
 
 
 async def _image_on_grid(obs_id: str, detector: int, ra: float | None, dec: float | None, fov_arcsec: float | None):

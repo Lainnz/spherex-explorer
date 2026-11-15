@@ -7,6 +7,7 @@ Facts this relies on were checked live on 2026-11-14 (docs/DATA_NOTES.md):
 """
 import asyncio
 import io
+import logging
 import re
 import weakref
 
@@ -20,9 +21,11 @@ SIA_URL = "https://irsa.ipac.caltech.edu/SIA"
 USER_AGENT = "spherex-xplorer/0.1 (+https://github.com/Lainnz/spherex-explorer)"
 # e.g. ".../l2b-v27-2026-228/6/level2_..." → "l2b-v27-2026-228"
 VERSION_RE = re.compile(r"l2b-v\d+-\d{4}-\d{3}")
-RETRIES = 3
+# IRSA sometimes answers "502 Proxy Error" in bursts (2026-11-14 and -15); retry for ~30 s.
+RETRIES = 4
 # New QR3 data arrives weekly, so search results are only kept for 6 hours.
 SEARCH_CACHE_SECONDS = 6 * HOUR
+log = logging.getLogger(__name__)
 
 # One limiter per event loop. A semaphore belongs to the loop that first waits on it, and
 # scripts and tests run each request in a fresh loop. A single shared semaphore made those
@@ -156,31 +159,57 @@ def parse_sia(content: bytes, release: str, survey: str) -> list[dict]:
 
 
 async def search_collection(
-    collection: str, release: str, survey: str, ra: float, dec: float, radius_deg: float
+    collection: str, release: str, survey: str, ra: float, dec: float, radius_deg: float,
+    cache_seconds: float = SEARCH_CACHE_SECONDS,
 ) -> list[dict]:
-    """One collection's images around a position, from the cache when possible."""
+    """One collection's images around a position, from the cache when possible.
+
+    `cache_seconds`: how long to remember the answer (a finished release like DR1 can be
+    remembered much longer than a weekly one like QR3; see search_cache_hours in
+    config/datasets.json).
+    """
     key = f"sia:{collection}:{ra:.4f}:{dec:.4f}:{radius_deg:.4f}"
     cache = get_cache()
     rows = cache.get(key)
     if rows is None:
         async def search() -> list[dict]:
             found = parse_sia(await fetch_sia(collection, ra, dec, radius_deg), release, survey)
-            cache.set(key, found, expire=SEARCH_CACHE_SECONDS)
+            cache.set(key, found, expire=cache_seconds)
             return found
 
         rows = await _once(key, search)
     return rows
 
 
-async def search_releases(releases: dict[str, dict], ra: float, dec: float, radius_deg: float) -> list[dict]:
+async def search_releases(
+    releases: dict[str, dict], ra: float, dec: float, radius_deg: float
+) -> tuple[list[dict], list[str]]:
     """Search every wide and deep collection of the chosen releases at the same time.
 
     `releases` maps a release id ("dr1") to its entry in datasets.json.
+    Returns (images found, collections that didn't answer). One collection failing doesn't
+    spoil the rest: on 2026-11-15 IRSA refused QR3 while DR1 answered with 225 images.
+    Raises IrsaUnavailable only if every collection fails.
     """
-    jobs = [
-        search_collection(collection, release_id, survey, ra, dec, radius_deg)
+    collections = [
+        (collection, release_id, survey, release.get("search_cache_hours", SEARCH_CACHE_SECONDS / HOUR) * HOUR)
         for release_id, release in releases.items()
         for survey, collection in release["sia_collections"].items()
     ]
-    results = await asyncio.gather(*jobs)
-    return [row for rows in results for row in rows]
+    results = await asyncio.gather(
+        *(search_collection(c, r, s, ra, dec, radius_deg, keep) for c, r, s, keep in collections),
+        return_exceptions=True,
+    )
+    rows: list[dict] = []
+    failed: list[str] = []
+    for (collection, *_), result in zip(collections, results):
+        if isinstance(result, IrsaUnavailable):
+            log.warning("IRSA search of %s failed: %s", collection, result)
+            failed.append(collection)
+        elif isinstance(result, BaseException):
+            raise result
+        else:
+            rows.extend(result)
+    if failed and len(failed) == len(collections):
+        raise IrsaUnavailable(f"every collection failed ({', '.join(failed)})")
+    return rows, failed

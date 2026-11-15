@@ -299,6 +299,23 @@ def test_motions_agree():
     assert objects.motions_agree({"pmra": None, "pmdec": None}, {"pmra": 1.0, "pmdec": 1.0})
 
 
+def test_movers_endpoint(monkeypatch):
+    queries = []
+
+    def fake_gaia(adql):
+        queries.append(adql)
+        return [{"source_id": 4472832130942575872, "ra": 269.4485, "dec": 4.7394, "ref_epoch": 2016.0,
+                 "pmra": -801.55, "pmdec": 10362.39, "parallax": 546.98, "phot_g_mean_mag": 8.19}]
+
+    monkeypatch.setattr(objects, "gaia_query", fake_gaia)
+    body = client.get("/api/movers", params={"ra": 269.45, "dec": 4.75, "radius": 0.05}).json()
+    assert body["movers"][0]["pm_arcsec_per_year"] == pytest.approx(10.393, abs=0.01)
+    assert body["movers"][0]["motion"]["epoch"] == 2016.0
+    assert "pm > 100" in queries[0]
+    client.get("/api/movers", params={"ra": 269.45, "dec": 4.75, "radius": 0.05})
+    assert len(queries) == 1, "second request comes from the cache"
+
+
 def test_identify_nothing_there(monkeypatch):
     monkeypatch.setattr(objects, "simbad_candidates", lambda *a: [])
     monkeypatch.setattr(objects, "gaia_candidates", lambda *a: [])

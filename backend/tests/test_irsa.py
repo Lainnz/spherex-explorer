@@ -48,6 +48,71 @@ def test_request_limit_works_across_event_loops(monkeypatch):
     asyncio.run(busy())  # failed before: "bound to a different event loop"
 
 
+RELEASES = {
+    "dr1": {"sia_collections": {"wide": "spherex_dr1", "deep": "spherex_dr1_deep"}},
+    "qr3": {"sia_collections": {"wide": "spherex_qr3", "deep": "spherex_qr3_deep"}},
+}
+
+
+def test_finished_releases_are_remembered_longer(monkeypatch, fake_irsa):
+    from app.cache import get_cache
+
+    remembered = {}
+    cache = get_cache()
+    real_set = cache.set
+
+    def spy(key, value, expire=None, **kwargs):
+        if key.startswith("sia:"):
+            remembered[key.split(":")[1]] = expire
+        return real_set(key, value, expire=expire, **kwargs)
+
+    monkeypatch.setattr(cache, "set", spy)
+    releases = {**RELEASES}
+    releases["dr1"] = {**RELEASES["dr1"], "search_cache_hours": 720}
+    releases["qr3"] = {**RELEASES["qr3"], "search_cache_hours": 6}
+    asyncio.run(irsa.search_releases(releases, 269.452, 4.693, 0.01))
+    assert remembered["spherex_dr1"] == 720 * 3600  # DR1 never changes: a month
+    assert remembered["spherex_qr3"] == 6 * 3600  # QR3 grows weekly: 6 hours
+
+
+def test_one_collection_failing_does_not_spoil_the_rest(monkeypatch):
+    # Like 2026-11-15: IRSA refused QR3 ("502 Proxy Error") while DR1 answered.
+    async def flaky(collection, ra, dec, radius_deg):
+        if collection.startswith("spherex_qr3"):
+            raise irsa.IrsaUnavailable("IRSA answered HTTP 502")
+        return fixture_bytes("sia_barnard_spherex_dr1.xml" if collection == "spherex_dr1" else "sia_empty.xml")
+
+    monkeypatch.setattr(irsa, "fetch_sia", flaky)
+    rows, failed = asyncio.run(irsa.search_releases(RELEASES, 269.452, 4.693, 0.01))
+    assert len(rows) == 31
+    assert sorted(failed) == ["spherex_qr3", "spherex_qr3_deep"]
+
+
+def test_every_collection_failing_raises(monkeypatch):
+    async def down(collection, ra, dec, radius_deg):
+        raise irsa.IrsaUnavailable("IRSA answered HTTP 502")
+
+    monkeypatch.setattr(irsa, "fetch_sia", down)
+    with pytest.raises(irsa.IrsaUnavailable):
+        asyncio.run(irsa.search_releases(RELEASES, 269.452, 4.693, 0.01))
+
+
+def test_failed_searches_are_not_cached(monkeypatch):
+    calls = []
+
+    async def fails_once(collection, ra, dec, radius_deg):
+        calls.append(collection)
+        if collection == "spherex_qr3" and calls.count("spherex_qr3") == 1:
+            raise irsa.IrsaUnavailable("IRSA answered HTTP 502")
+        return fixture_bytes("sia_barnard_spherex_qr3.xml" if collection == "spherex_qr3" else "sia_empty.xml")
+
+    monkeypatch.setattr(irsa, "fetch_sia", fails_once)
+    _, failed = asyncio.run(irsa.search_releases(RELEASES, 269.452, 4.693, 0.01))
+    assert failed == ["spherex_qr3"]
+    rows, failed = asyncio.run(irsa.search_releases(RELEASES, 269.452, 4.693, 0.01))
+    assert failed == [] and len(rows) == 15, "QR3 is asked again, and answers this time"
+
+
 def test_identical_searches_at_the_same_time_share_one_irsa_request(monkeypatch):
     calls = []
 
@@ -74,8 +139,8 @@ def test_search_uses_every_collection_once_then_cache(fake_irsa):
         "dr1": {"sia_collections": {"wide": "spherex_dr1", "deep": "spherex_dr1_deep"}},
         "qr3": {"sia_collections": {"wide": "spherex_qr3", "deep": "spherex_qr3_deep"}},
     }
-    rows = asyncio.run(irsa.search_releases(releases, 269.452, 4.693, 0.01))
-    assert len(rows) == 31 + 15
+    rows, failed = asyncio.run(irsa.search_releases(releases, 269.452, 4.693, 0.01))
+    assert len(rows) == 31 + 15 and failed == []
     assert sorted(fake_irsa) == ["spherex_dr1", "spherex_dr1_deep", "spherex_qr3", "spherex_qr3_deep"]
 
     asyncio.run(irsa.search_releases(releases, 269.452, 4.693, 0.01))

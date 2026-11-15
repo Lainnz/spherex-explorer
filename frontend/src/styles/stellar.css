@@ -110,6 +110,11 @@
 .sky-inner {
   width: 100%;
   height: 100%;
+  /* Keep Aladin's own layers (some with high z-index) in their own stack, below our
+     frame overlay and drag catcher. */
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
 }
 /* Covers the sky (same colour as the title page's fade) until the map is drawn. */
 .sky-loading {
@@ -344,6 +349,16 @@
   padding: 0.85rem 1rem;
 }
 
+/* --- Image sequence (Phase 8) ---------------------------------------------------------- */
+.frame-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
 .time-bar {
   position: absolute;
   left: 0;
@@ -351,19 +366,204 @@
   bottom: 0;
   z-index: 10;
   display: flex;
-  gap: 1rem;
-  align-items: center;
-  padding: 0.6rem 1rem;
-  background: rgb(1 25 57 / 0.92);
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.5rem 1rem 0.4rem;
+  background: rgb(1 25 57 / 0.94);
   border-top: 1px solid var(--panel-border);
 }
-.time-label {
-  font-family: var(--font-display);
+.time-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.time-controls .tool {
+  width: 36px;
+  height: 36px;
+}
+.time-controls select {
+  height: 34px;
+  font: 0.85rem var(--font-mono);
+  color: var(--white);
+  background: var(--night-sky);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+}
+.slider-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 8rem;
+}
+.slider-wrap input {
+  width: 100%;
+  accent-color: var(--teal);
+}
+.ticks {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: -4px;
+  height: 6px;
+  pointer-events: none;
+}
+.tick {
+  position: absolute;
+  width: 2px;
+  height: 8px;
+  background: var(--amber);
+  transform: translateX(-1px);
+}
+.time-info {
+  display: flex;
+  gap: 1rem;
   font-size: 0.85rem;
+}
+.filmstrip {
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+  padding-bottom: 0.2rem;
+}
+.thumb {
+  position: relative;
+  flex: none;
+  padding: 0;
+  border: 2px solid var(--panel-border);
+  border-radius: 4px;
+  background: var(--night-sky);
+  cursor: pointer;
+  line-height: 0;
+}
+.thumb canvas {
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+}
+.thumb.is-current {
+  outline: 2px solid var(--white);
+  outline-offset: 1px;
+}
+.thumb-badge {
+  position: absolute;
+  left: 2px;
+  bottom: 2px;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: var(--teal);
+  font: 600 0.6rem var(--font-ui);
+  line-height: 1.4;
 }
 .time-bar [data-mode-embed] {
   display: none;
-  margin-left: auto;
+}
+
+.panel-heading {
+  margin: 1rem 0 0.5rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--teal-hover);
+}
+.field-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0 0.6rem;
+}
+.field-grid select,
+.control-panel select {
+  width: 100%;
+  min-width: 0;
+}
+.control-panel {
+  overflow-x: hidden;
+}
+.field output {
+  font-family: var(--font-mono);
+  color: var(--soft-white);
+}
+.button-row {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.6rem 0;
+}
+.small-button {
+  padding: 0.3rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid var(--panel-border);
+  background: var(--night-sky);
+  color: var(--soft-white);
+  font: 500 0.82rem var(--font-ui);
+  cursor: pointer;
+}
+.small-button:hover,
+.small-button[aria-pressed='true'] {
+  border-color: var(--teal);
+  color: var(--white);
+}
+.small-button[aria-pressed='true'] {
+  background: rgb(0 151 157 / 0.3);
+}
+.segmented {
+  display: flex;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 0.6rem;
+}
+.segmented button {
+  flex: 1;
+  padding: 0.35rem 0.2rem;
+  border: none;
+  background: var(--night-sky);
+  color: var(--soft-white);
+  font: 500 0.8rem var(--font-ui);
+  cursor: pointer;
+}
+.segmented button[aria-pressed='true'] {
+  background: var(--teal);
+  color: var(--white);
+}
+.op-section {
+  margin-bottom: 0.6rem;
+}
+.find-movers {
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  font: 600 0.9rem var(--font-ui);
+}
+
+.frame-player {
+  position: absolute;
+  left: 50%;
+  top: 0.75rem;
+  transform: translateX(-50%);
+  z-index: 15;
+  max-width: min(90vw, 760px);
+  max-height: calc(100% - 9rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.frame-player-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.85rem;
+}
+.frame-player-view {
+  overflow: auto;
+  max-height: 60vh;
+  background: #000;
+}
+.frame-player-view canvas {
+  display: block;
+  image-rendering: pixelated;
+}
+
+.control-panel,
+.drawer {
+  max-height: calc(100% - 10rem);
 }
 
 .toasts {

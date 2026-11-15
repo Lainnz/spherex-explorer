@@ -181,6 +181,7 @@ async def frame_stream(
         "estimated_download_mb": round(n_downloads * limits["cutout_mb_estimate"], 1),
         "grid": {"ra": center_ra, "dec": center_dec, "width": grid.width, "height": grid.height},
         "visits": visits,
+        "warning": observations.get("warning"),
     }
 
     failure_reasons: Counter = Counter()

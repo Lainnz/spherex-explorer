@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 
 from app import irsa
 from app.main import app
+from conftest import fixture_bytes
 from app.observations import deduplicate
 
 client = TestClient(app)
@@ -67,9 +68,32 @@ def test_friendly_errors(fake_irsa):
         assert response.json()["error"] == error
 
 
+def test_missing_collections_give_a_warning_but_still_answer(monkeypatch):
+    async def partial(*args):
+        rows = irsa.parse_sia(fixture_bytes("sia_barnard_spherex_dr1.xml"), "dr1", "wide")
+        return rows, ["spherex_qr3", "spherex_qr3_deep"]
+
+    monkeypatch.setattr(irsa, "search_releases", partial)
+    body = client.get("/api/observations", params={"ra": 269.452, "dec": 4.693}).json()
+    assert body["returned"] == 31
+    assert body["unavailable_collections"] == ["spherex_qr3", "spherex_qr3_deep"]
+    assert "QR3 and QR3 Deep" in body["warning"]
+
+
+def test_no_images_because_collections_failed_is_not_no_coverage(monkeypatch):
+    async def none_found(*args):
+        return [], ["spherex_qr3"]
+
+    monkeypatch.setattr(irsa, "search_releases", none_found)
+    response = client.get("/api/observations", params={"ra": 10, "dec": 10})
+    assert response.status_code == 503
+    assert response.json()["error"] == "irsa_partly_unavailable"
+    assert "reload" in response.json()["message"]
+
+
 def test_no_coverage(monkeypatch):
     async def nothing(*args):
-        return []
+        return [], []
 
     monkeypatch.setattr(irsa, "search_releases", nothing)
     response = client.get("/api/observations", params={"ra": 10, "dec": 10})

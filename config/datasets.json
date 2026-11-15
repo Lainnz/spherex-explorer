@@ -7,14 +7,18 @@
       "doi": "10.26131/IRSA678",
       "sia_collections": { "wide": "spherex_dr1", "deep": "spherex_dr1_deep" },
       "priority": 1,
-      "status": "active"
+      "status": "active",
+      "_search_cache_note": "DR1 is a finished release that won't change, so searches are remembered for 30 days.",
+      "search_cache_hours": 720
     },
     "qr3": {
       "label": "SPHEREx Quick Release 3 (weekly)",
       "doi": "10.26131/IRSA662",
       "sia_collections": { "wide": "spherex_qr3", "deep": "spherex_qr3_deep" },
       "priority": 2,
-      "status": "active"
+      "status": "active",
+      "_search_cache_note": "QR3 gains new images every week, so searches are re-checked after 6 hours.",
+      "search_cache_hours": 6
     }
   },
   "allsky_cube": {

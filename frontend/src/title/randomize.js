@@ -4,6 +4,7 @@
  * a famous sight from config/targets.json.
  */
 import { getJson } from '../shared/api.js';
+import { viewPosition } from '../shared/motion.js';
 import { featuredTargets, interestingSpots } from '../shared/targets.js';
 
 /**
@@ -20,7 +21,7 @@ export async function randomDestination({ live, random = Math.random }) {
     }
   }
   const spots = [
-    ...featuredTargets.map((t) => ({ ra: t.ra, dec: t.dec, fov: t.demo?.fov_arcsec, name: t.name, target: t.slug })),
+    ...featuredTargets.map((t) => ({ ...viewPosition(t), fov: t.demo?.fov_arcsec, name: t.name, target: t.slug })),
     ...interestingSpots.map((s) => ({ ra: s.ra, dec: s.dec, fov: s.fov_arcsec, name: s.name })),
   ];
   return spots[Math.floor(random() * spots.length)];

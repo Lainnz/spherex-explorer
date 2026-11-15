@@ -161,6 +161,40 @@ def gaia_candidates(ra: float, dec: float, radius_arcsec: float) -> list[dict]:
     return list(unique.values())
 
 
+def gaia_query(adql: str) -> list[dict]:
+    return _rows(pyvo.dal.TAPService(GAIA_TAP).run_sync(adql).to_table())
+
+
+def fast_movers(ra: float, dec: float, radius_deg: float, min_pm_mas: float) -> list[dict]:
+    """Gaia DR3 stars near (ra, dec) moving faster than `min_pm_mas` per year, for the
+    time slider's moving markers. Fast stars are searched up to 5′ beyond the circle,
+    since by 2026 they may have moved into it (Barnard's Star: ~100″ since 2016)."""
+    cache = get_cache()
+    key = f"movers:{ra:.4f}:{dec:.4f}:{radius_deg:.4f}:{min_pm_mas:.0f}"
+    if key in cache:
+        return cache[key]
+    query = (
+        "SELECT TOP 200 source_id, ra, dec, ref_epoch, pmra, pmdec, parallax, phot_g_mean_mag "
+        "FROM gaiadr3.gaia_source WHERE "
+        + _circle("ra", "dec", ra, dec, radius_deg * 3600 + FAST_SEARCH_ARCSEC)
+        + f" AND pm > {min_pm_mas} ORDER BY phot_g_mean_mag"
+    )
+    movers = [
+        {
+            "name": f"Gaia DR3 {row['source_id']}",
+            "source_id": str(row["source_id"]),
+            "motion": {"ra": row["ra"], "dec": row["dec"], "epoch": row["ref_epoch"] or 2016.0,
+                       "pmra": row["pmra"], "pmdec": row["pmdec"], "parallax": row["parallax"]},
+            "magnitude_g": round(row["phot_g_mean_mag"], 2) if row["phot_g_mean_mag"] is not None else None,
+            "pm_arcsec_per_year": round(math.hypot(row["pmra"], row["pmdec"]) / 1000, 3),
+        }
+        for row in gaia_query(query)
+        if row["pmra"] is not None and row["pmdec"] is not None
+    ]
+    cache.set(key, movers, expire=30 * DAY)
+    return movers
+
+
 def separation_arcsec(ra1: float, dec1: float, ra2: float, dec2: float) -> float:
     """Angle between two sky positions (haversine formula, fine for small angles)."""
     ra1, dec1, ra2, dec2 = map(math.radians, (ra1, dec1, ra2, dec2))

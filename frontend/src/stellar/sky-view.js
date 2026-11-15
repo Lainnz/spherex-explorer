@@ -149,6 +149,15 @@ export async function createSkyView(container, { ra, dec, fovDeg, rotation = 0, 
       const result = aladin.pix2world(x, y);
       return result ? { ra: result[0], dec: result[1] } : null;
     },
+    /** Screen position (CSS pixels inside the sky) of a sky position, or null if off-view. */
+    skyToPixel(sra, sdec) {
+      try {
+        const result = aladin.world2pix(sra, sdec);
+        return result && Number.isFinite(result[0]) ? { x: result[0], y: result[1] } : null;
+      } catch {
+        return null; // behind the visible hemisphere
+      }
+    },
     setTarget(tra, tdec) {
       targetMarker.removeAll();
       targetMarker.addSources([A.source(tra, tdec)]);

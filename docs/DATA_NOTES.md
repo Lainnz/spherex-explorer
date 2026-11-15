@@ -353,6 +353,59 @@ Search radius 0.01° around each target's mid-2026 predicted position.
   and calls `setRotation`. The sign between dragging clockwise and Aladin's angle
   (`ROTATION_SIGN` in nav-tools.js) needs the visual check.
 
+## 16. Phase 8: image sequence in the browser
+- **Drawing frames on the sky.** Frames are drawn on our own canvas over Aladin. Three
+  frame corners (from the grid WCS: TAN, CRVAL/CRPIX/CDELT) go through `aladin.world2pix`
+  every animation frame, giving an affine canvas transform, so frames follow pan, zoom
+  and rotation. The JS gnomonic inverse matches astropy to 0.002 mas (checked at
+  Dec 66.8°). `world2pix` returns a typed array `{0: x, 1: y}`.
+- **Fast movers must be pointed at "now".** With the view centred on Barnard's Star's
+  J2000 position, its frames (centred on the 2025–26 position) were drawn ~1,300 px above
+  the screen at a 5′ field of view. Title-page search, Randomize and the Stellar View now
+  centre fast movers (> 50 mas/yr) on their predicted 2026.0 position
+  (`shared/motion.js viewPosition`). `config/targets.json` keeps the catalogue values and
+  the team's exact WISE 0855 coordinates.
+- **Stacking order:** `.sky-inner { position: relative; z-index: 0; isolation: isolate }`
+  keeps Aladin's internal layers below our overlay.
+- **Client maths** (`stellar/render-math.js`, in a Web Worker): viridis and inferno from
+  Matt Zucker's CC0 polynomial fits (end colours within ~1% of matplotlib); cividis
+  approximated from five stops. Stretches: percent (shared per detector), auto (per
+  frame), fixed. Stack mean/median/sum; difference with least-squares brightness matching.
+- **Checks (headless Edge, 2026-11-15):** all five featured targets load, play, and run
+  "Find moving objects" in demo mode (8–21 frames). Live Barnard's Star: 364 images, 22
+  frames, 208 s on first load (IRSA search + cutouts), difference pair at the predicted
+  position.
+- **New endpoint `/api/movers`:** Gaia DR3 stars with pm > 100 mas/yr near a position
+  (searched up to 5′ beyond the circle), cached 30 days, for the moving markers. Not in
+  the demo data yet.
+
+## 17. IRSA refusing some requests (2026-11-15, morning)
+- For a random spot (RA 120°, Dec +30°), `spherex_dr1` answered in 21 s (225 images) and
+  `spherex_dr1_deep` in 21 s (0 images), but `spherex_qr3` and `spherex_qr3_deep` returned
+  **502 Proxy Error within 0.3 s**, even one at a time. Minutes later QR3 at Barnard's Star
+  answered fine while `wise_allwise` and TAP gave 502: IRSA's proxy refuses requests at
+  random, as on 2026-11-14.
+- Previously one failed collection failed the whole search ("NASA's image archive isn't
+  answering"). Now `irsa.search_releases` returns `(rows, failed_collections)`, failures
+  aren't cached, retries run ~30 s (4 tries), and answers carry
+  `unavailable_collections` plus a plain-language `warning` (also in the frames `start`
+  message), shown once in the Stellar View. The full error appears only if every
+  collection fails; "no images" caused by failures is a 503 asking to reload, not
+  "SPHEREx hasn't observed this spot".
+
+## 18. Making loading faster (ideas, 2026-11-15)
+Time for a new spot: SIA search 20 s–3 min, then cutouts (~4 MB each, ~1–2 min for 80).
+- **Done:** searches are remembered per release (`search_cache_hours` in datasets.json):
+  DR1 (finished) 30 days, QR3 (weekly) 6 hours.
+- **To test when IRSA is healthy:** searching via TAP (`spherex.obscore` with
+  `CONTAINS(POINT, s_region)`). Both tries so far hit 502 Proxy Errors.
+- **Phase 10:** warm the featured targets nightly (search + cutouts) in the data-refresh job.
+- **Later:** read only the needed rows of each image from NASA's AWS copy
+  (`nasa-irsa-spherex`; SIA rows include `cloud_access` with bucket and key), skipping the
+  3.9 MB EPSF table. Roughly 2–3× less data per image at a 5′ field, but more requests
+  and more code.
+- **Deployment:** host the backend in the US near IRSA/AWS (Hugging Face Spaces).
+
 ## Sources
 IRSA SIA (`https://irsa.ipac.caltech.edu/SIA`), IRSA cutouts (IBE), IRSA HiPS
 properties, CDS MocServer, npm registry/jsDelivr for Aladin Lite.
