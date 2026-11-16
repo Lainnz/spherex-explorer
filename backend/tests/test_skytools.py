@@ -10,8 +10,26 @@ from app.main import app
 client = TestClient(app)
 
 
+def url_routes(routes=None):
+    """Every URL handler, including ones added with include_router.
+
+    FastAPI 0.163 keeps an included router as one bookkeeping object. Its real
+    addresses live on that object's router, and the object itself has no path.
+    """
+    if routes is None:
+        routes = app.routes
+    found = []
+    for route in routes:
+        nested = getattr(route, "original_router", None)
+        if nested is not None:
+            found.extend(url_routes(nested.routes))
+        elif hasattr(route, "path"):
+            found.append(route)
+    return found
+
+
 def test_sky_tool_routes_are_registered():
-    paths = {route.path for route in app.routes}
+    paths = {route.path for route in url_routes()}
     for path in [
         "/api/hips/spherex/channels",
         "/api/hips/spherex-rgb/{frames}/properties",
@@ -26,7 +44,7 @@ def test_sky_tool_routes_are_registered():
 
 
 def test_no_two_routes_share_an_address():
-    seen = [(route.path, tuple(sorted(getattr(route, "methods", None) or []))) for route in app.routes]
+    seen = [(route.path, tuple(sorted(getattr(route, "methods", None) or []))) for route in url_routes()]
     assert len(seen) == len(set(seen))
 
 
