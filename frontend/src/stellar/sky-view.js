@@ -54,18 +54,45 @@ export const SKY_MAPS = {
     label: 'SPHEREx all-sky, 102 colours (DR1, IRSA)', url: datasets.allsky_cube.hips_url, cube: true, group: 'SPHEREx',
     note: 'Real SPHEREx data: one of the 102 infrared colours at a time (pick it with the slider), straight from NASA IRSA.',
   },
-  spherex_color: { label: 'SPHEREx colour (QR2, via CDS)', id: datasets.hips.spherex_color_qr2, group: 'SPHEREx' },
+  spherex_color: {
+    label: 'SPHEREx colour, 6 detectors (QR2, CDS)', urls: datasets.hips.spherex_color_qr2, group: 'SPHEREx',
+    note: 'Real SPHEREx data, combined into colour by CDS (Strasbourg). Only on CDS servers, so it may be unavailable.',
+  },
   ...Object.fromEntries(datasets.detectors.map((d) => [
     `spherex_${d.id.toLowerCase()}`,
-    { label: `SPHEREx ${d.id}, ${d.em_min_um.toFixed(2)}–${d.em_max_um.toFixed(2)} µm (QR2, via CDS)`, id: datasets.hips[`spherex_${d.id}_qr2`], group: 'SPHEREx' },
+    {
+      label: `SPHEREx ${d.id}, ${d.em_min_um.toFixed(2)}–${d.em_max_um.toFixed(2)} µm (QR2, CDS)`, urls: datasets.hips[`spherex_${d.id}_qr2`], group: 'SPHEREx',
+      note: 'Real SPHEREx data from one detector, prepared by CDS (Strasbourg). Only on CDS servers, so it may be unavailable.',
+    },
   ])),
-  wise_color: { label: 'AllWISE colour (NASA)', id: datasets.hips.wise_color, group: 'Other telescopes', note: 'Not SPHEREx: NASA WISE, 3.4–22 µm.' },
-  unwise: { label: 'unWISE colour (NASA WISE)', id: datasets.hips.unwise, group: 'Other telescopes', note: 'Not SPHEREx: NASA WISE, re-processed.' },
-  twomass: { label: '2MASS colour (NASA/IPAC)', id: datasets.hips.twomass, group: 'Other telescopes', note: 'Not SPHEREx: 2MASS near-infrared, 1.2–2.2 µm.' },
+  // Other telescopes, shortest wavelength first. Each has a list of mirrors (config/datasets.json).
+  dss2_color: {
+    label: 'DSS2 colour: visible light (Palomar & UK Schmidt)', urls: datasets.hips.dss2_color, group: 'Other telescopes',
+    note: 'Not SPHEREx: Digitized Sky Survey photographic plates, about 0.4–0.9 µm, roughly what a big telescope shows the eye. Dust clouds look dark here but glow in infrared.',
+  },
+  twomass: {
+    label: '2MASS colour: near-infrared 1.2–2.2 µm', urls: datasets.hips.twomass, group: 'Other telescopes',
+    note: 'Not SPHEREx: Two Micron All Sky Survey (ground-based, 1997–2001), J, H, K bands as blue, green, red. Overlaps SPHEREx\'s shortest colours.',
+  },
+  wise_color: {
+    label: 'AllWISE colour: infrared 3.4–22 µm (NASA WISE)', urls: datasets.hips.wise_color, group: 'Other telescopes',
+    note: 'Not SPHEREx: NASA WISE space telescope, W1 (3.4 µm), W2 (4.6 µm), W4 (22 µm) as blue, green, red. Warm dust glows red.',
+  },
+  unwise: {
+    label: 'unWISE colour: 3.4 & 4.6 µm (NASA WISE, re-processed)', urls: datasets.hips.unwise, group: 'Other telescopes',
+    note: 'Not SPHEREx: WISE/NEOWISE images re-processed to go deeper. Only on CDS servers, so it may be unavailable.',
+  },
+  iras_iris: {
+    label: 'IRAS colour: far-infrared 12–100 µm (IRIS)', urls: datasets.hips.iras_iris, group: 'Other telescopes',
+    note: 'Not SPHEREx: IRAS (1983), re-processed as IRIS. Shows cold dust SPHEREx can\'t see, but very blurry up close (about 4′ pixels).',
+  },
 };
 
 /** The map to fall back to when our data server is asleep: real SPHEREx data, served by IRSA. */
 export const NO_SERVER_MAP = 'spherex_cube';
+
+/** Tile servers for a sky map, in the order to try them. */
+export const mapSources = (spec) => (spec.url ? [spec.url] : spec.urls ?? []);
 
 /** Aladin options for one sky map. */
 const hipsOptions = (spec) => ({ name: spec.label, ...(spec.colormap ? { colormap: spec.colormap } : {}) });
@@ -84,6 +111,7 @@ const CATALOGUE_MAX_RADIUS_DEG = 0.5; // the server's limit; keeps downloads sma
 /** A marker's name: SIMBAD name, AllWISE designation or Gaia source id. */
 const rowName = (row) => row.main_id ?? row.designation ?? (row.source_id ? `Gaia DR3 ${row.source_id}` : '');
 const VIEW_FOV_RANGE_DEG = [30 / 3600, 180];
+const MIRROR_TIMEOUT_MS = 12000; // per tile server, before trying the next mirror
 
 let aladinModule = null;
 
@@ -123,7 +151,7 @@ export async function createSkyView(container, { ra, dec, fovDeg, rotation = 0, 
     target: `${ra} ${dec}`,
     fov: fovDeg,
     // Start on our map; Aladin's default (DSS from CDS) failed to load on 2026-11-15.
-    survey: startMap.url ?? startMap.id,
+    survey: mapSources(startMap)[0],
     // Don't send Aladin's start-up usage report (page address and referrer) to CDS's
     // logger; it also failed ("Failed to fetch") on 2026-11-15.
     log: false,
@@ -167,6 +195,31 @@ export async function createSkyView(container, { ra, dec, fovDeg, rotation = 0, 
   aladin.addOverlay(footprints);
   const targetMarker = A.catalog({ name: 'Your coordinate', shape: 'plus', color: '#00B5BC', sourceSize: 22 });
   aladin.addCatalog(targetMarker);
+
+  /**
+   * Make an image layer for a sky map, trying each mirror until one answers. Maps with one
+   * address (SPHEREx from IRSA or our server) are returned at once, as before.
+   * @returns {Promise<object>} the layer; rejects with a readable message if every mirror fails
+   */
+  async function openMap(spec) {
+    const sources = mapSources(spec);
+    if (sources.length === 1) return A.imageHiPS(sources[0], hipsOptions(spec));
+    for (const source of sources) {
+      const layer = A.imageHiPS(source, hipsOptions(spec));
+      try {
+        await Promise.race([
+          layer.query,
+          new Promise((_, reject) => { setTimeout(() => reject(new Error('timed out')), MIRROR_TIMEOUT_MS); }),
+        ]);
+        return layer;
+      } catch (error) {
+        console.warn(`Sky map "${spec.label}": ${source} did not answer.`, error);
+      }
+    }
+    throw new Error(`Couldn't reach any server for "${spec.label}" (tried ${sources.length}).`);
+  }
+  let baseRequest = 0;
+  let overlayRequest = 0;
 
   const clampFov = (deg) => Math.min(VIEW_FOV_RANGE_DEG[1], Math.max(VIEW_FOV_RANGE_DEG[0], deg));
 
@@ -220,11 +273,16 @@ export async function createSkyView(container, { ra, dec, fovDeg, rotation = 0, 
       targetMarker.addSources([A.source(tra, tdec)]);
     },
     /** Choose the background sky map; for the 102-colour cube, also the plane. */
+    /** Rejects (and keeps the current map) if no mirror answers; resolves false if superseded. */
     async setBaseMap(key, plane) {
       const spec = SKY_MAPS[key];
-      baseLayer = A.imageHiPS(spec.url ?? spec.id, hipsOptions(spec));
+      const request = ++baseRequest;
+      const layer = await openMap(spec);
+      if (request !== baseRequest) return false; // the user picked another map meanwhile
+      baseLayer = layer;
       aladin.setBaseImageLayer(baseLayer);
       if (spec.cube && Number.isInteger(plane)) await this.setPlane(plane);
+      return true;
     },
     /** Resolves once the background map is on screen (or after a timeout). */
     async whenReady() {
@@ -235,13 +293,17 @@ export async function createSkyView(container, { ra, dec, fovDeg, rotation = 0, 
       if (!baseLayer || !(await whenAdded(baseLayer))) return;
       if (cubePlane === plane) baseLayer.setSliceNumber(plane);
     },
-    setOverlayMap(key, opacity) {
+    /** Rejects if no mirror answers (the overlay is then removed); resolves false if superseded. */
+    async setOverlayMap(key, opacity) {
+      const request = ++overlayRequest;
       aladin.removeImageLayer('overlay');
-      if (!key) return;
+      if (!key) return true;
       const spec = SKY_MAPS[key];
-      const layer = A.imageHiPS(spec.url ?? spec.id, hipsOptions(spec));
+      const layer = await openMap(spec);
+      if (request !== overlayRequest) return false;
       aladin.setOverlayImageLayer(layer, 'overlay');
       layer.setOpacity(opacity);
+      return true;
     },
     setOverlayOpacity(opacity) {
       aladin.getOverlayImageLayer('overlay')?.setOpacity(opacity);

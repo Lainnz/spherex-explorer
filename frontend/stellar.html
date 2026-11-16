@@ -404,9 +404,10 @@
         </section>
         <section id="tab-layers" role="tabpanel" aria-labelledby="tab-layers-button" class="tab-body">
           <label class="field">
-            <span>Sky map <button type="button" class="help" data-help="The picture of the whole sky behind everything. It opens on SPHEREx false colour: three of SPHEREx's 102 infrared colours shown as blue, green and red. Switch to the 102-colour map to look at one infrared colour at a time.">?</button></span>
+            <span>Sky map <button type="button" class="help" data-help="The picture of the whole sky behind everything. It opens on SPHEREx false colour: three of SPHEREx's 102 infrared colours shown as blue, green and red. Switch to the 102-colour map to look at one infrared colour at a time, or to another telescope (visible light, 2MASS, WISE, IRAS) to compare what each one sees.">?</button></span>
             <select id="base-map"></select>
             <small class="note" data-map-note></small>
+            <small class="note" data-map-status role="status" aria-live="polite"></small>
           </label>
           <label class="field" data-wavelength-row>
             <span>Wavelength <button type="button" class="help" data-help="Which of SPHEREx's 102 infrared colours to show. Longer wavelengths see cooler things and through more dust.">?</button></span>
@@ -416,7 +417,7 @@
           <label class="toggles"><input type="checkbox" id="match-wavelength" /> Match the sky map to the frame's colour
             <button type="button" class="help" data-help="When you stop on a frame, the sky behind it switches to SPHEREx's all-sky map at the same infrared colour, so the frame blends in.">?</button></label>
           <label class="field">
-            <span>Overlay <button type="button" class="help" data-help="A second sky map on top of the first. Use the slider to see through it.">?</button></span>
+            <span>Overlay <button type="button" class="help" data-help="A second sky map on top of the first, e.g. another telescope over SPHEREx. Use the slider to fade between them.">?</button></span>
             <select id="overlay-map"><option value="">None</option></select>
             <input id="overlay-opacity" type="range" min="0" max="1" step="0.05" aria-label="Overlay see-through" />
           </label>

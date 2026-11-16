@@ -30,6 +30,8 @@ export function setupLayers({ root, sky, state, home, live, onChange }) {
   const catalogueStatus = root.querySelector('[data-catalogue-status]');
 
   const mapNote = root.querySelector('[data-map-note]');
+  const mapStatus = root.querySelector('[data-map-status]');
+  const say = (text) => { if (mapStatus) mapStatus.textContent = text; };
   // Grouped menus, so real SPHEREx maps and other telescopes' maps are never confused.
   const groups = {};
   for (const [key, spec] of Object.entries(SKY_MAPS)) {
@@ -53,12 +55,34 @@ export function setupLayers({ root, sky, state, home, live, onChange }) {
     wavelengthLabel.textContent = describePlane(plane);
   }
 
-  async function applyBase() {
-    baseSelect.value = state.base;
-    const isCube = Boolean(SKY_MAPS[state.base].cube);
+  let shownBase = null; // the map actually on screen, to go back to if a new one fails
+  function describeBase(key) {
+    const isCube = Boolean(SKY_MAPS[key].cube);
+    baseSelect.value = key;
     wavelengthRow.hidden = !isCube;
-    if (mapNote) mapNote.textContent = SKY_MAPS[state.base].note ?? '';
-    await sky.setBaseMap(state.base, isCube ? plane : undefined);
+    if (mapNote) mapNote.textContent = SKY_MAPS[key].note ?? '';
+    return isCube;
+  }
+  async function applyBase() {
+    const key = state.base;
+    const isCube = describeBase(key);
+    say(`Loading ${SKY_MAPS[key].label}…`);
+    try {
+      const done = await sky.setBaseMap(key, isCube ? plane : undefined);
+      if (done === false) return; // another map was picked meanwhile
+      shownBase = key;
+      say('');
+    } catch (error) {
+      console.warn(error);
+      if (state.base !== key) return;
+      // Keep the old picture, and say so, instead of looking as if nothing happened.
+      say(`⚠ ${error.message} Still showing ${shownBase ? SKY_MAPS[shownBase].label : 'the previous map'}. Try again later.`);
+      if (shownBase) {
+        state.base = shownBase;
+        describeBase(shownBase);
+        onChange();
+      }
+    }
   }
 
   baseSelect.addEventListener('change', () => {
@@ -66,6 +90,24 @@ export function setupLayers({ root, sky, state, home, live, onChange }) {
     applyBase();
     onChange();
   });
+
+  async function applyOverlay() {
+    const key = state.overlay;
+    opacitySlider.disabled = !key;
+    if (key) say(`Loading overlay ${SKY_MAPS[key].label}…`);
+    try {
+      const done = await sky.setOverlayMap(key, state.opacity);
+      if (done !== false) say('');
+    } catch (error) {
+      console.warn(error);
+      if (state.overlay !== key) return;
+      say(`⚠ ${error.message} Overlay turned off.`);
+      state.overlay = undefined;
+      overlaySelect.value = '';
+      opacitySlider.disabled = true;
+      onChange();
+    }
+  }
   wavelengthSlider.addEventListener('input', () => {
     let next = Number(wavelengthSlider.value);
     // Skip the two blank planes in the direction of travel.
@@ -80,8 +122,7 @@ export function setupLayers({ root, sky, state, home, live, onChange }) {
   // --- Overlay map --------------------------------------------------------------------------
   overlaySelect.addEventListener('change', () => {
     state.overlay = overlaySelect.value || undefined;
-    opacitySlider.disabled = !state.overlay;
-    sky.setOverlayMap(state.overlay, state.opacity);
+    applyOverlay();
     onChange();
   });
   opacitySlider.addEventListener('input', () => {
@@ -123,12 +164,12 @@ export function setupLayers({ root, sky, state, home, live, onChange }) {
   // --- Start from the URL state -----------------------------------------------------------
   showPlane();
   applyBase();
-  if (state.overlay) {
-    overlaySelect.value = state.overlay;
-    sky.setOverlayMap(state.overlay, state.opacity);
-  }
   opacitySlider.value = String(state.opacity);
   opacitySlider.disabled = !state.overlay;
+  if (state.overlay && SKY_MAPS[state.overlay]) {
+    overlaySelect.value = state.overlay;
+    applyOverlay();
+  }
   for (const key of state.cat ?? []) {
     toggles[key].checked = true;
     showCatalogue(key, true);
